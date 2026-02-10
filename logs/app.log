@@ -1,0 +1,162 @@
+2026-02-10 15:52:35 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 15:52:35 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 15:53:06 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 15:53:06 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 15:53:06 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 15:53:06 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 15:53:06 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 15:53:13 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:53:13] "GET / HTTP/1.1" 200 -
+2026-02-10 15:53:13 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:53:13] "GET /static/app.js HTTP/1.1" 200 -
+2026-02-10 15:53:13 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:53:13] "GET /static/style.css HTTP/1.1" 200 -
+2026-02-10 15:53:13 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:53:13] "GET /sessions/sample_session.json HTTP/1.1" 200 -
+2026-02-10 15:53:14 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:53:14] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-02-10 15:54:28 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 15:54:28 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 15:54:28 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 15:54:29 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 15:54:29 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 15:54:29 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:54:29] "GET / HTTP/1.1" 200 -
+2026-02-10 15:54:29 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:54:29] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 15:54:29 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:54:29] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+2026-02-10 15:54:29 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 15:54:29] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 16:21:37 [INFO] [werkzeug]  * Detected change in 'C:\\AosrProject\\core\\template_manager.py', reloading
+2026-02-10 16:21:37 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 16:21:38 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 16:21:38 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 16:25:51 [INFO] [werkzeug]  * Detected change in 'C:\\AosrProject\\core\\template_manager.py', reloading
+2026-02-10 16:25:52 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 16:25:52 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 16:25:52 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 16:26:07 [INFO] [werkzeug]  * Detected change in 'C:\\AosrProject\\app.py', reloading
+2026-02-10 16:26:07 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 16:26:07 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 16:26:07 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 16:26:16 [INFO] [werkzeug]  * Detected change in 'C:\\AosrProject\\core\\template_manager.py', reloading
+2026-02-10 16:26:16 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 16:26:16 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 16:26:16 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 16:28:24 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 16:28:24 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 16:28:24 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 16:28:24 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 16:28:24 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 16:28:24 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:24] "GET / HTTP/1.1" 200 -
+2026-02-10 16:28:24 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:24] "GET /static/style.css HTTP/1.1" 200 -
+2026-02-10 16:28:24 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:24] "GET /static/app.js HTTP/1.1" 200 -
+2026-02-10 16:28:24 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:24] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 16:28:26 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:26] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 16:28:29 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:29] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 16:28:41 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:41] "POST /api/templates/save_metadata HTTP/1.1" 200 -
+2026-02-10 16:28:41 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:28:41] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 16:29:08 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:29:08] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 16:29:24 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:29:24] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 16:29:26 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:29:26] "POST /api/session/save HTTP/1.1" 200 -
+2026-02-10 16:35:02 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 16:35:02 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 16:35:02 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 16:35:02 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 16:35:02 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 16:35:02 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:02] "GET / HTTP/1.1" 200 -
+2026-02-10 16:35:02 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:02] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 16:35:03 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:03] "GET /static/app.js HTTP/1.1" 200 -
+2026-02-10 16:35:03 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:03] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 16:35:08 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:08] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 16:35:09 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:09] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 16:35:11 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:11] "POST /api/templates/save_metadata HTTP/1.1" 200 -
+2026-02-10 16:35:11 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 16:35:11] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:25:19 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 17:25:19 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 17:25:19 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 17:25:19 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 17:25:19 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 17:25:19 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:19] "GET / HTTP/1.1" 200 -
+2026-02-10 17:25:19 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:19] "GET /static/style.css HTTP/1.1" 200 -
+2026-02-10 17:25:19 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:19] "GET /static/app.js HTTP/1.1" 200 -
+2026-02-10 17:25:19 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:19] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 17:25:34 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 17:25:34 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 17:25:34 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 17:25:35 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 17:25:35 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 17:25:35 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:35] "GET / HTTP/1.1" 200 -
+2026-02-10 17:25:35 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:35] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 17:25:35 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:35] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+2026-02-10 17:25:35 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:35] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 17:25:40 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:40] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:25:41 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:25:41] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:26:40 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:26:40] "POST /api/session/save HTTP/1.1" 200 -
+2026-02-10 17:26:50 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:26:50] "POST /api/dates/calculate HTTP/1.1" 200 -
+2026-02-10 17:29:57 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 17:29:57 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 17:29:57 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 17:29:57 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 17:29:57 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 17:29:57 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:29:57] "GET / HTTP/1.1" 200 -
+2026-02-10 17:29:58 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:29:58] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+2026-02-10 17:29:58 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:29:58] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 17:29:58 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:29:58] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 17:30:18 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:30:18] "POST /api/session/save HTTP/1.1" 200 -
+2026-02-10 17:30:23 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:30:23] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:30:23 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:30:23] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:30:28 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:30:28] "POST /api/templates/save_metadata HTTP/1.1" 200 -
+2026-02-10 17:30:28 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:30:28] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:31:51 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 17:31:51 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 17:31:51 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 17:31:52 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 17:31:52 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 17:31:52 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:31:52] "GET / HTTP/1.1" 200 -
+2026-02-10 17:31:52 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:31:52] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+2026-02-10 17:31:52 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:31:52] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 17:31:52 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:31:52] "[33mPOST /api/session/load HTTP/1.1[0m" 404 -
+2026-02-10 17:31:52 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:31:52] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 17:31:57 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:31:57] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:32:04 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:32:04] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:34:18 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 17:34:18 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 17:34:18 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 17:34:18 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 17:34:18 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 17:34:18 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:18] "GET / HTTP/1.1" 200 -
+2026-02-10 17:34:18 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:18] "GET /static/app.js HTTP/1.1" 200 -
+2026-02-10 17:34:18 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:18] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 17:34:18 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:18] "[33mPOST /api/session/load HTTP/1.1[0m" 404 -
+2026-02-10 17:34:18 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:18] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 17:34:23 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:23] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:34:24 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:24] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:34:30 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:30] "GET / HTTP/1.1" 200 -
+2026-02-10 17:34:30 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:30] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-02-10 17:34:30 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:30] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+2026-02-10 17:34:30 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:30] "[33mPOST /api/session/load HTTP/1.1[0m" 404 -
+2026-02-10 17:34:30 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:30] "[36mGET /sessions/sample_session.json HTTP/1.1[0m" 304 -
+2026-02-10 17:34:31 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:31] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:34:34 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:34] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:34:35 [ERROR] [core.template_manager] Failed to open docx C:\AosrProject\templates\~$АОСР3.docx: File is not a zip file
+2026-02-10 17:34:35 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:35] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:34:39 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:39] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:34:40 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:40] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:34:41 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:41] "POST /api/templates/save_metadata HTTP/1.1" 200 -
+2026-02-10 17:34:41 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:34:41] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:38:27 [INFO] [werkzeug] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-10 17:38:27 [INFO] [werkzeug] [33mPress CTRL+C to quit[0m
+2026-02-10 17:38:27 [INFO] [werkzeug]  * Restarting with stat
+2026-02-10 17:38:27 [WARNING] [werkzeug]  * Debugger is active!
+2026-02-10 17:38:27 [INFO] [werkzeug]  * Debugger PIN: 969-589-440
+2026-02-10 17:38:27 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:27] "GET / HTTP/1.1" 200 -
+2026-02-10 17:38:27 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:27] "GET /static/app.js HTTP/1.1" 200 -
+2026-02-10 17:38:27 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:27] "GET /static/style.css HTTP/1.1" 200 -
+2026-02-10 17:38:27 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:27] "[33mPOST /api/session/load HTTP/1.1[0m" 404 -
+2026-02-10 17:38:27 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:27] "GET /sessions/sample_session.json HTTP/1.1" 200 -
+2026-02-10 17:38:36 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:36] "GET /api/templates/list HTTP/1.1" 200 -
+2026-02-10 17:38:37 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:38:37] "POST /api/templates/build_metadata HTTP/1.1" 200 -
+2026-02-10 17:40:07 [INFO] [werkzeug] 127.0.0.1 - - [10/Feb/2026 17:40:07] "GET /api/templates/list HTTP/1.1" 200 -

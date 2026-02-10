@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Генератор исполнительной документации (демо)</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Генератор исполнительной документации — демо UI</h1>
+    <p class="subtitle">Минимальный интерфейс для проверки backend‑эндпоинтов.</p>
+  </header>
+
+  <main class="layout">
+    <section class="controls">
+      <h2>Сессия</h2>
+      <div class="buttons-row">
+        <input type="text" id="input-session-name" placeholder="Имя сессии (без даты)" />
+        <button id="btn-save-session">Сохранить сессию</button>
+      </div>
+      <div class="buttons-row">
+        <button id="btn-load-file">Загрузить файл...</button>
+        <button id="btn-load-sample">Загрузить sample_session.json</button>
+        <button id="btn-new-session">Новая сессия</button>
+      </div>
+      <input type="file" id="file-input-session" accept=".json,application/json" style="display:none" />
+
+      <h3>Пересчёт дат</h3>
+      <div class="dates-row">
+        <label>
+          global_start:
+          <input type="date" id="input-global-start" />
+        </label>
+        <label>
+          global_end:
+          <input type="date" id="input-global-end" />
+        </label>
+        <button id="btn-calc-dates">Пересчитать даты</button>
+      </div>
+
+      <h3>Генерация документов</h3>
+      <div class="buttons-row">
+        <button id="btn-generate">Сгенерировать комплект (docx+pdf)</button>
+        <label class="inline">
+          <input type="checkbox" id="chk-merge-pdf" />
+          объединить PDF в один
+        </label>
+      </div>
+
+      <h3>Предпросмотр документа</h3>
+      <div class="preview-row">
+        <label>
+          doc_id:
+          <input type="text" id="input-doc-id" placeholder="например, DOC_1" />
+        </label>
+        <button id="btn-preview">Сформировать предпросмотр</button>
+      </div>
+    </section>
+
+    <section class="editor">
+      <div class="tabs">
+        <button class="tab-button active" data-tab="constants">Постоянные данные</button>
+        <button class="tab-button" data-tab="materials">Материалы</button>
+        <button class="tab-button" data-tab="aosr">АОСР</button>
+        <button class="tab-button" data-tab="other">Остальные шаблоны</button>
+        <button class="tab-button" data-tab="attachments">Приложения</button>
+        <button class="tab-button" data-tab="registry">Реестр</button>
+        <button class="tab-button" data-tab="templates">Шаблоны</button>
+        <button class="tab-button" data-tab="json">JSON</button>
+      </div>
+
+      <div class="tab-panels">
+        <div id="tab-constants" class="tab-panel active">
+          <h2>Постоянные данные</h2>
+          <p class="hint">Редактируйте общие поля, которые будут подставляться во все документы.</p>
+          <table class="simple-table" id="constants-table">
+            <thead>
+              <tr>
+                <th>Ключ</th>
+                <th>Значение</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+          <div class="constants-add-row">
+            <input type="text" id="const-new-key" placeholder="Новый ключ" />
+            <input type="text" id="const-new-value" placeholder="Значение" />
+            <button id="btn-add-const">Добавить</button>
+          </div>
+        </div>
+
+        <div id="tab-materials" class="tab-panel">
+          <h2>Материалы</h2>
+          <p class="hint">Пока только просмотр. Распределение по актам будет добавлено позже.</p>
+          <table class="simple-table" id="materials-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Наименование</th>
+                <th>Кол-во</th>
+                <th>Ед.</th>
+                <th>Документ</th>
+                <th>Срок действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="tab-aosr" class="tab-panel">
+          <h2>АОСР</h2>
+          <p class="hint">Список актов АОСР по текущей сессии.</p>
+          <table class="simple-table" id="aosr-table">
+            <thead>
+              <tr>
+                <th>order</th>
+                <th>id</th>
+                <th>Название</th>
+                <th>Начало</th>
+                <th>Окончание</th>
+                <th>manual_override</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="tab-other" class="tab-panel">
+          <h2>Остальные шаблоны</h2>
+          <table class="simple-table" id="other-table">
+            <thead>
+              <tr>
+                <th>order</th>
+                <th>id</th>
+                <th>Тип</th>
+                <th>Название</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="tab-attachments" class="tab-panel">
+          <h2>Приложения</h2>
+          <table class="simple-table" id="attachments-table">
+            <thead>
+              <tr>
+                <th>id</th>
+                <th>Путь</th>
+                <th>Тип</th>
+                <th>Порядок</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="tab-registry" class="tab-panel">
+          <h2>Реестр</h2>
+          <p class="hint">Упрощённый реестр по полю order.</p>
+          <table class="simple-table" id="registry-table">
+            <thead>
+              <tr>
+                <th>order</th>
+                <th>id</th>
+                <th>Название</th>
+                <th>Окончание</th>
+                <th>Файл (логически)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div id="tab-templates" class="tab-panel">
+          <h2>Шаблоны (.docx)</h2>
+          <p class="hint">Список шаблонов в папке templates. Для файлов без .json можно сгенерировать metadata.</p>
+          <table class="simple-table" id="templates-table">
+            <thead>
+              <tr>
+                <th>.docx</th>
+                <th>Название</th>
+                <th>Тип</th>
+                <th>Есть metadata</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <h3>Черновик metadata</h3>
+          <p class="hint">Проверьте и при необходимости отредактируйте JSON перед сохранением.</p>
+          <textarea id="template-meta-text" spellcheck="false"></textarea>
+          <div class="buttons-row">
+            <button id="btn-save-template-meta" disabled>Сохранить metadata в template.json</button>
+          </div>
+        </div>
+
+        <div id="tab-json" class="tab-panel">
+          <h2>Сырой JSON</h2>
+          <textarea id="session-json" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="output">
+      <h2>Результат</h2>
+      <pre id="output-log"></pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
+

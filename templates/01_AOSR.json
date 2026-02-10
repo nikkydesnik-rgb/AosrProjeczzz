@@ -1,0 +1,16 @@
+{
+  "display_name": "Акт освидетельствования скрытых работ",
+  "type": "АОСР",
+  "multiple": true,
+  "prefix": "AOSR",
+  "date_mode": "period",
+  "in_registry": true,
+  "default_pages": 2,
+  "fields": {
+    "Объект": "string",
+    "номер": "string",
+    "Наименование_работ": "text",
+    "Материалы_и_серты": "text"
+  }
+}
+

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мастер АОСР</title>
+    <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- Блок управления сессиями -->
+    <div class="session-panel">
+        <div class="session-group">
+            <select id="savedSessionsSelect">
+                <option value="" disabled selected>📂 Выберите сохранение...</option>
+                {% for s in saved_sessions %}
+                <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-sm" onclick="loadSession()">Загрузить</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSession()">🗑️</button>
+        </div>
+        <div class="session-group">
+            <input type="text" id="newSessionName" placeholder="Имя нового сохранения">
+            <button type="button" class="btn btn-sm btn-success" onclick="saveSessionAs()">💾 Сохранить как...</button>
+        </div>
+    </div>
+
+    <div class="header-title">
+        <h1>🏗️ Генератор Исполнительной Документации</h1>
+    </div>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'tab-general')">📝 Постоянные данные</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-registry')">📋 Реестр актов</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab-single')">📄 Титулы и Реестры</button>
+    </div>
+
+    <form id="mainForm" method="POST">
+        
+        <!-- Вкладка 1: Все 20+ полей -->
+        <div id="tab-general" class="tab-content active" style="display:block;">
+            
+            <!-- Даты (Важное) -->
+            <div class="dates-block">
+                <div class="form-group">
+                    <label>📅 Дата начала работ</label>
+                    <input type="date" name="start_date" value="{{ data.start_date }}">
+                </div>
+                <div class="form-group">
+                    <label>📅 Дата окончания работ</label>
+                    <input type="date" name="end_date" value="{{ data.end_date }}">
+                </div>
+                <div class="form-group">
+                    <label>Кол-во экземпляров</label>
+                    <select name="Экз">
+                        <option value="2" {% if data.constant_fields.get('Экз') == '2' %}selected{% endif %}>2</option>
+                        <option value="3" {% if data.constant_fields.get('Экз') == '3' %}selected{% endif %}>3</option>
+                        <option value="4" {% if data.constant_fields.get('Экз') == '4' %}selected{% endif %}>4</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Сетка полей (3 колонки) -->
+            <div class="grid-form-3col">
+                <!-- Организации -->
+                <div class="column">
+                    <h3>🏢 Организации</h3>
+                    <div class="form-group"><label>Объект</label><textarea name="Объект">{{ data.constant_fields.get('Объект', '') }}</textarea></div>
+                    <div class="form-group"><label>Застройщик</label><textarea name="Застройщик">{{ data.constant_fields.get('Застройщик', '') }}</textarea></div>
+                    <div class="form-group"><label>Строитель (Лицо, осущ. стр-во)</label><textarea name="Строитель">{{ data.constant_fields.get('Строитель', '') }}</textarea></div>
+                    <div class="form-group"><label>Проектная организация</label><textarea name="Проектная_организация">{{ data.constant_fields.get('Проектная_организация', '') }}</textarea></div>
+                    <div class="form-group"><label>Проект или ТЗ</label><textarea name="Проект_или_ТЗ">{{ data.constant_fields.get('Проект_или_ТЗ', '') }}</textarea></div>
+                    <div class="form-group"><label>Субподрядчик (Исполнитель)</label><textarea name="Организация_исполнитель">{{ data.constant_fields.get('Организация_исполнитель', '') }}</textarea></div>
+                </div>
+
+                <!-- Представители -->
+                <div class="column">
+                    <h3>👷 Ответственные лица</h3>
+                    <div class="form-group"><label>Представитель застройщика (Должность)</label><textarea name="Представитель_застр">{{ data.constant_fields.get('Представитель_застр', '') }}</textarea></div>
+                    <div class="form-group"><label>ФИО представителя застройщика</label><textarea name="ФИО_застр">{{ data.constant_fields.get('ФИО_застр', '') }}</textarea></div>
+                    <div class="form-group"><label>Распоряжение (Застройщик)</label><textarea name="Распор_застр">{{ data.constant_fields.get('Распор_застр', '') }}</textarea></div>
+                    
+                    <div class="form-group"><label>Производитель работ (Должность)</label><textarea name="Пр_раб">{{ data.constant_fields.get('Пр_раб', '') }}</textarea></div>
+                    <div class="form-group"><label>ФИО производителя работ</label><textarea name="ФИО_Пр_раб">{{ data.constant_fields.get('ФИО_Пр_раб', '') }}</textarea></div>
+                    <div class="form-group"><label>Распоряжение (Пр. раб)</label><textarea name="Распор_пр_раб">{{ data.constant_fields.get('Распор_пр_раб', '') }}</textarea></div>
+                </div>
+
+                <!-- Контроль и Проектировщики -->
+                <div class="column">
+                    <h3>🔍 Контроль и Иные</h3>
+                    <div class="form-group"><label>Стройконтроль (Должность)</label><textarea name="Строй_контроль_Должность">{{ data.constant_fields.get('Строй_контроль_Должность', '') }}</textarea></div>
+                    <div class="form-group"><label>ФИО стройконтроля</label><textarea name="ФИО_Стройк">{{ data.constant_fields.get('ФИО_Стройк', '') }}</textarea></div>
+                    <div class="form-group"><label>Распоряжение (Стройконтроль)</label><textarea name="Распор_стройк">{{ data.constant_fields.get('Распор_стройк', '') }}</textarea></div>
+                    
+                    <div class="form-group"><label>Проектировщик (Должность)</label><textarea name="Проектировщик_должность">{{ data.constant_fields.get('Проектировщик_должность', '') }}</textarea></div>
+                    <div class="form-group"><label>ФИО проектировщика</label><textarea name="Проектировщик_ФИО">{{ data.constant_fields.get('Проектировщик_ФИО', '') }}</textarea></div>
+                    <div class="form-group"><label>Распоряжение (Проектировщик)</label><textarea name="Распоряжение_проект">{{ data.constant_fields.get('Распоряжение_проект', '') }}</textarea></div>
+
+                    <div class="form-group"><label>Иные лица (Должность)</label><textarea name="Иные_долж">{{ data.constant_fields.get('Иные_долж', '') }}</textarea></div>
+                    <div class="form-group"><label>ФИО иных лиц</label><textarea name="ФИО_Иные">{{ data.constant_fields.get('ФИО_Иные', '') }}</textarea></div>
+                    <div class="form-group"><label>Распоряжение (Иные)</label><textarea name="Распор_иные">{{ data.constant_fields.get('Распор_иные', '') }}</textarea></div>
+                    <div class="form-group"><label>Выполнил работы</label><textarea name="Выполнил_работы">{{ data.constant_fields.get('Выполнил_работы', '') }}</textarea></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка 2: Таблица -->
+        <div id="tab-registry" class="tab-content">
+            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                <button type="button" class="btn btn-primary" onclick="addRow()">➕ Строка</button>
+                <button type="button" class="btn btn-success" onclick="calcDates()">📅 Даты</button>
+            </div>
+            <div id="hot-container"></div>
+            <input type="hidden" name="table_data_json" id="table_data_json" value='{{ data.rows_data|tojson }}'>
+            <input type="hidden" name="preview_index" id="preview_index" value="0">
+        </div>
+
+        <!-- Вкладка 3: Одиночные документы -->
+        <div id="tab-single" class="tab-content">
+            <div style="display: flex; gap: 30px; min-height: 400px;">
+                <div style="width: 300px;">
+                    <h3>Шаблоны</h3>
+                    <div class="template-list">
+                        {% for t in single_templates %}
+                        <div class="template-item" onclick="loadSingleTemplate('{{t}}', this)">📄 {{ t }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div style="flex-grow: 1; border-left: 1px solid #eee; padding-left: 30px;">
+                    <h3 id="selected-tpl-name">Выберите шаблон</h3>
+                    <div id="dynamic-fields" class="grid-form"></div>
+                    <div id="single-actions" style="display:none; margin-top: 30px;">
+                        <hr>
+                        <button type="button" class="btn btn-success" onclick="generateSingleDoc()">⬇️ Скачать</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+<script>
+    const initialData = {{ data.rows_data|tojson }};
+    const actsTemplates = {{ acts_templates|tojson }};
+    initTable(initialData, actsTemplates);
+</script>
+
+</body>
+</html>
