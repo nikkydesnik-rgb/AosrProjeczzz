@@ -13,17 +13,109 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import re
-import zipfile
+
+from docx import Document
 
 
 logger = logging.getLogger(__name__)
 
+
 TEMPLATES_DIR = Path("templates")
+
+
+DOC_SPECIFIC_KEYWORDS = [
+    "материал",
+    "серт",
+    "прилож",
+    "схем",
+    "черт",
+    "испыт",
+    "наименование_работ",
+]
+
+# Явные поля из рабочего сценария (см. присланный пример Nik66.py).
+KNOWN_CONSTANT_KEYS = {
+    "Объект",
+    "Застройщик",
+    "Строитель",
+    "Проектная_организация",
+    "Проект_или_ТЗ",
+    "Представитель_застр",
+    "ФИО_застр",
+    "Распор_застр",
+    "Пр_раб",
+    "ФИО_Пр_раб",
+    "Распор_пр_раб",
+    "Строй_контроль_Должность",
+    "ФИО_Стройк",
+    "Распор_стройк",
+    "Проектировщик_должность",
+    "Проектировщик_ФИО",
+    "Распоряжение_проект",
+    "Выполнил_работы",
+    "Иные_долж",
+    "ФИО_Иные",
+    "Распор_иные",
+    "Организация_исполнитель",
+    "Экз",
+}
+
+KNOWN_DOC_KEYS = {
+    "номер",
+    "Наименование_работ",
+    "Начало",
+    "Конец",
+    "Материалы_и_серты",
+    "Схемы_и_тд",
+    "Разрешает_пр_во_работ_по",
+    "СП",
+    "Ч",
+    "М",
+    "Г",
+    "Чнач",
+    "Мнач",
+    "Гн",
+    "date_end",
+}
+
+
+def split_fields_by_scope(keys: List[str]) -> tuple[List[str], List[str]]:
+    """Разделяет ключи на постоянные и по-документные с сохранением порядка.
+
+    Приоритет:
+    1) явные списки KNOWN_CONSTANT_KEYS / KNOWN_DOC_KEYS;
+    2) fallback-эвристика по ключевым словам для по-актовых полей.
+    """
+    constant_keys: List[str] = []
+    doc_keys: List[str] = []
+
+    for key in keys:
+        normalized = (key or "").strip()
+        if not normalized:
+            continue
+
+        if normalized in KNOWN_CONSTANT_KEYS:
+            constant_keys.append(normalized)
+            continue
+
+        if normalized in KNOWN_DOC_KEYS:
+            doc_keys.append(normalized)
+            continue
+
+        low = normalized.lower()
+        is_doc_specific = any(word in low for word in DOC_SPECIFIC_KEYWORDS)
+        if is_doc_specific:
+            doc_keys.append(normalized)
+        else:
+            constant_keys.append(normalized)
+
+    return constant_keys, doc_keys
+
 
 
 @dataclass
@@ -39,6 +131,8 @@ class TemplateMeta:
     in_registry: bool = True
     default_pages: int = 1
     fields: Dict[str, str] | None = None
+    constant_fields_order: List[str] | None = None
+    doc_fields_order: List[str] | None = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Сериализация в dict формата template.json (без абсолютных путей)."""
@@ -51,6 +145,8 @@ class TemplateMeta:
             "in_registry": self.in_registry,
             "default_pages": self.default_pages,
             "fields": self.fields or {},
+            "constant_fields_order": self.constant_fields_order or [],
+            "doc_fields_order": self.doc_fields_order or [],
         }
 
 
@@ -103,6 +199,8 @@ def load_template_metadata(path: str | Path) -> TemplateMeta | None:
             in_registry=bool(data.get("in_registry", True)),
             default_pages=int(data.get("default_pages", 1)),
             fields=data.get("fields") or {},
+            constant_fields_order=data.get("constant_fields_order") or [],
+            doc_fields_order=data.get("doc_fields_order") or [],
         )
     except Exception as exc:
         logger.error("Failed to parse template metadata %s: %s", p, exc)
@@ -123,6 +221,8 @@ def load_template_metadata_from_dict(docx_path: str | Path, data: Dict[str, Any]
             in_registry=bool(data.get("in_registry", True)),
             default_pages=int(data.get("default_pages", 1)),
             fields=data.get("fields") or {},
+            constant_fields_order=data.get("constant_fields_order") or [],
+            doc_fields_order=data.get("doc_fields_order") or [],
         )
     except Exception as exc:
         logger.error("Failed to build TemplateMeta from dict for %s: %s", docx_path, exc)
@@ -132,22 +232,37 @@ def load_template_metadata_from_dict(docx_path: str | Path, data: Dict[str, Any]
 def extract_keys_from_docx(path: str | Path) -> List[str]:
     """Извлекает плейсхолдеры {{ключ}} в порядке следования в документе.
 
-    Для сохранения порядка читаем XML напрямую, а не используем set.
+    Для сохранения порядка читаем текст документа и не используем set как итоговую структуру.
     Порядок ключей используется затем для полей metadata и
     для добавления ключей в "Постоянные данные".
     """
     p = Path(path)
     try:
-        with zipfile.ZipFile(p) as zf:
-            xml = zf.read("word/document.xml").decode("utf-8", errors="ignore")
+        doc = Document(p)
     except Exception as exc:
         logger.error("Failed to open docx %s: %s", p, exc)
         return []
 
-    pattern = re.compile(r"{{\s*(.+?)\s*}}")
+    chunks: List[str] = []
+
+    # Тело документа
+    chunks.extend(par.text for par in doc.paragraphs)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                chunks.extend(par.text for par in cell.paragraphs)
+
+    # Колонтитулы и заголовки секций
+    for section in doc.sections:
+        chunks.extend(par.text for par in section.header.paragraphs)
+        chunks.extend(par.text for par in section.footer.paragraphs)
+
+    text = "\n".join(chunks)
+
+    pattern = re.compile(r"{{\s*([^{}\n]+?)\s*}}")
     seen = set()
     keys: List[str] = []
-    for m in pattern.finditer(xml):
+    for m in pattern.finditer(text):
         key = m.group(1)
         if key not in seen:
             seen.add(key)
@@ -166,6 +281,7 @@ def build_metadata_skeleton(docx_path: str | Path) -> TemplateMeta:
     # Важно: не сортируем keys, чтобы сохранить порядок,
     # максимально близкий к порядку появления в шаблоне.
     fields: Dict[str, str] = {k: "string" for k in keys}
+    constant_fields_order, doc_fields_order = split_fields_by_scope(keys)
 
     return TemplateMeta(
         path=p,
@@ -177,6 +293,8 @@ def build_metadata_skeleton(docx_path: str | Path) -> TemplateMeta:
         in_registry=True,
         default_pages=1,
         fields=fields,
+        constant_fields_order=constant_fields_order,
+        doc_fields_order=doc_fields_order,
     )
 
 
@@ -189,4 +307,3 @@ def save_template_metadata(meta: TemplateMeta, json_path: str | Path | None = No
     with p.open("w", encoding="utf-8") as f:
         json.dump(meta.to_dict(), f, ensure_ascii=False, indent=2)
     return p
-

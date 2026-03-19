@@ -30,6 +30,12 @@ def create_app() -> Flask:
         static_folder=str(BASE_DIR / "static"),
         template_folder=str(BASE_DIR / "templates_web"),
     )
+    # Важно: не сортируем ключи JSON, чтобы сохранять порядок полей шаблона.
+    app.config["JSON_SORT_KEYS"] = False
+    try:
+        app.json.sort_keys = False
+    except Exception:
+        pass
 
     # Главная страница — HTML UI
     @app.get("/")

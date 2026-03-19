@@ -111,20 +111,31 @@
 
         <div id="tab-aosr" class="tab-panel">
           <h2>АОСР</h2>
-          <p class="hint">Список актов АОСР по текущей сессии.</p>
-          <table class="simple-table" id="aosr-table">
-            <thead>
-              <tr>
-                <th>order</th>
-                <th>id</th>
-                <th>Название</th>
-                <th>Начало</th>
-                <th>Окончание</th>
-                <th>manual_override</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+          <p class="hint">Редактируемая таблица актов АОСР: здесь заполняются поля, которые меняются от акта к акту.</p>
+          <div class="buttons-row">
+            <button id="btn-add-aosr-row" type="button">Добавить акт (строку)</button>
+          </div>
+          <div class="table-scroll-x">
+            <table class="simple-table" id="aosr-table">
+              <thead>
+                <tr>
+                  <th>order</th>
+                  <th>id</th>
+                  <th>Название</th>
+                  <th>№</th>
+                  <th>Наименование работ</th>
+                  <th>Материалы и серты</th>
+                  <th>Схемы и т.д.</th>
+                  <th>Разрешает пр-во работ</th>
+                  <th>СП</th>
+                  <th>Начало</th>
+                  <th>Окончание</th>
+                  <th>manual_override</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
 
         <div id="tab-other" class="tab-panel">
@@ -178,6 +189,7 @@
         <div id="tab-templates" class="tab-panel">
           <h2>Шаблоны (.docx)</h2>
           <p class="hint">Список шаблонов в папке templates. Для файлов без .json можно сгенерировать metadata.</p>
+          <p class="hint">После генерации metadata можно добавить шаблон в реестр: для шаблонов с <code>multiple=true</code> будет предложено количество актов. Ключи разделяются на постоянные и по-актовые.</p>
           <table class="simple-table" id="templates-table">
             <thead>
               <tr>
@@ -185,6 +197,7 @@
                 <th>Название</th>
                 <th>Тип</th>
                 <th>Есть metadata</th>
+                <th>В реестр</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -215,4 +228,3 @@
   <script src="/static/app.js"></script>
 </body>
 </html>
-
