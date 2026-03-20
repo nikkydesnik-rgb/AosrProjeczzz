@@ -237,3 +237,28 @@ textarea#template-meta-text {
   color: #6b7280;
 }
 
+
+
+.table-scroll-x {
+  overflow-x: auto;
+}
+
+.aosr-cell-input,
+.aosr-cell-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: #fff;
+}
+
+.aosr-cell-textarea {
+  min-height: 34px;
+  resize: vertical;
+}
+
+.aosr-cell-checkbox {
+  transform: scale(1.05);
+}
