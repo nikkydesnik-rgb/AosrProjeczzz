@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Генератор исполнительной документации (демо)</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet" />
 </head>
 <body>
   <header class="app-header">
@@ -111,30 +112,13 @@
 
         <div id="tab-aosr" class="tab-panel">
           <h2>АОСР</h2>
-          <p class="hint">Редактируемая таблица актов АОСР: здесь заполняются поля, которые меняются от акта к акту.</p>
+          <p class="hint">Интерактивная таблица реестра АОСР (Handsontable): изменения автоматически сериализуются в сессию.</p>
           <div class="buttons-row">
             <button id="btn-add-aosr-row" type="button">Добавить акт (строку)</button>
+            <button id="btn-delete-aosr-selected" type="button">Удалить отмеченные</button>
           </div>
-          <div class="table-scroll-x">
-            <table class="simple-table" id="aosr-table">
-              <thead>
-                <tr>
-                  <th>order</th>
-                  <th>id</th>
-                  <th>Название</th>
-                  <th>№</th>
-                  <th>Наименование работ</th>
-                  <th>Материалы и серты</th>
-                  <th>Схемы и т.д.</th>
-                  <th>Разрешает пр-во работ</th>
-                  <th>СП</th>
-                  <th>Начало</th>
-                  <th>Окончание</th>
-                  <th>manual_override</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+          <div id="aosr-hot-wrapper">
+            <div id="aosr-hot"></div>
           </div>
         </div>
 
@@ -225,6 +209,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

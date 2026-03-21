@@ -243,22 +243,18 @@ textarea#template-meta-text {
   overflow-x: auto;
 }
 
-.aosr-cell-input,
-.aosr-cell-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  font-size: 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  padding: 4px 6px;
+#aosr-hot-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
   background: #fff;
 }
 
-.aosr-cell-textarea {
-  min-height: 34px;
-  resize: vertical;
+#aosr-hot {
+  width: 100%;
 }
 
-.aosr-cell-checkbox {
-  transform: scale(1.05);
+#aosr-hot .handsontable td,
+#aosr-hot .handsontable th {
+  font-size: 12px;
 }
