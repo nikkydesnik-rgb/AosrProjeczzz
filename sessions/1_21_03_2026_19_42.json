@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "session_id": "demo-001",
+    "name": "тест1_21_03_2026_19_42",
+    "created_at": "2026-03-21T16:42:26.554Z"
+  },
+  "constant_fields": {
+    "Объект": "Улица Ленина, 5",
+    "Застройщик": "ООО СтройСеть",
+    "Проектная_организация": "Проект+"
+  },
+  "documents": [
+    {
+      "id": "DOC_2",
+      "type": "Испытание",
+      "template": "02_Test.docx",
+      "title": "Акт испытания трубопровода",
+      "order": 2,
+      "manual_override": false,
+      "start_date": null,
+      "end_date": null,
+      "pages": 1,
+      "data": {
+        "номер": "2",
+        "Наименование_работ": "Гидравлические испытания трубопровода"
+      }
+    },
+    {
+      "id": "DOC_1",
+      "type": "АОСР",
+      "template": "01_AOSR.docx",
+      "title": "АОСР №1",
+      "order": 1,
+      "manual_override": true,
+      "start_date": null,
+      "end_date": null,
+      "pages": 2,
+      "data": {
+        "номер": "1",
+        "Наименование_работ": "Подготовка траншеи под трубопровод",
+        "Начало": "",
+        "Конец": "",
+        "Материалы_и_серты": "",
+        "Схемы_и_тд": "",
+        "Разрешает_пр_во_работ_по": "",
+        "СП": ""
+      }
+    }
+  ],
+  "materials": [
+    {
+      "row_id": 1,
+      "name": "Песок строительный 2й категории",
+      "qty": 300,
+      "unit": "м3",
+      "document_name": "Серт. № 123",
+      "validity": "2027-05-01",
+      "allocations": []
+    }
+  ],
+  "attachments": [],
+  "settings": {
+    "workdays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "default_aosr_pages": 2,
+    "naming_pattern": "{{order}}_{{type}}_{{short}}"
+  }
+}

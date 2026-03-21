@@ -85,29 +85,38 @@ def distribute_dates(session: dict, global_start: str | None, global_end: str | 
     n_docs = len(docs_for_calc)
     n_days = len(all_days)
 
-    # Распределяем блоки рабочих дней по документам.
+    # Распределяем даты по правилам:
+    # - нормальный срок: последовательные периоды;
+    # - короткий срок: разрешаем наложения концов/начал;
+    # - очень короткий срок: допускаем однодневные акты в один и тот же день.
     blocks: List[List[date]] = []
+    if n_docs <= 0:
+        return session
 
     if n_days >= n_docs:
-        base = n_days // n_docs
-        extra = n_days % n_docs
+        # Границы считаем равномерно, конец предыдущего может совпасть с началом следующего.
+        # Пример: [16..18], 2 акта -> [16..17], [17..18].
+        boundaries: List[int] = []
+        for i in range(n_docs + 1):
+            idx = round(i * (n_days - 1) / max(1, n_docs))
+            if i > 0 and idx < boundaries[-1]:
+                idx = boundaries[-1]
+            boundaries.append(idx)
 
-        idx = 0
         for i in range(n_docs):
-            span = base + (1 if i < extra else 0)
-            if span <= 0:
-                span = 1
-            block = all_days[idx : idx + span]
+            left = boundaries[i]
+            right = boundaries[i + 1]
+            if right < left:
+                right = left
+            block = all_days[left : right + 1]
             if not block:
-                block = [all_days[-1]]
+                block = [all_days[min(left, n_days - 1)]]
             blocks.append(block)
-            idx += span
     else:
-        # Рабочих дней меньше, чем документов — допускаем наложения:
-        # несколько документов могут иметь одну и ту же дату.
+        # Дней меньше, чем актов: часть актов придется ставить в один и тот же день.
         for i in range(n_docs):
-            day = all_days[i % n_days]
-            blocks.append([day])
+            idx = round(i * (n_days - 1) / max(1, n_docs - 1)) if n_docs > 1 else 0
+            blocks.append([all_days[idx]])
 
     # Применяем блоки к документам без manual_override.
     idx_block = 0
@@ -127,6 +136,10 @@ def distribute_dates(session: dict, global_start: str | None, global_end: str | 
         if date_mode == "period":
             doc["start_date"] = format_iso_date(start)
             doc["end_date"] = format_iso_date(end)
+            data = doc.get("data")
+            if isinstance(data, dict):
+                data["Начало"] = start.strftime("%d.%m.%Y")
+                data["Конец"] = end.strftime("%d.%m.%Y")
         else:
             single = end
             doc["start_date"] = format_iso_date(single)

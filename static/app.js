@@ -3,6 +3,42 @@ let templatesCache = [];
 let currentTemplateName = null;
 let aosrHot = null;
 let syncingFromHot = false;
+let previewZoom = 1;
+const DEFAULT_CONSTANT_KEYS = [
+  "Объект",
+  "Застройщик",
+  "Строитель",
+  "Проектная_организация",
+  "Проект_или_ТЗ",
+  "Представитель_застр",
+  "ФИО_застр",
+  "Распор_застр",
+  "Пр_раб",
+  "ФИО_Пр_раб",
+  "Распор_пр_раб",
+  "Строй_контроль_Должность",
+  "ФИО_Стройк",
+  "Распор_стройк",
+  "Проектировщик_должность",
+  "Проектировщик_ФИО",
+  "Распоряжение_проект",
+  "Выполнил_работы",
+  "Иные_долж",
+  "ФИО_Иные",
+  "Распор_иные",
+  "Организация_исполнитель",
+  "Экз",
+];
+
+function ensureDefaultConstantFields(session) {
+  if (!session) return;
+  session.constant_fields = session.constant_fields || {};
+  DEFAULT_CONSTANT_KEYS.forEach((key) => {
+    if (!(key in session.constant_fields)) {
+      session.constant_fields[key] = key === "Экз" ? "2" : "";
+    }
+  });
+}
 
 async function fetchText(path) {
   const res = await fetch(path);
@@ -57,6 +93,7 @@ function flushEditorsToSession() {
 
 function setSessionJson(obj) {
   currentSession = obj;
+  ensureDefaultConstantFields(currentSession);
   syncTextareaFromSession();
   renderAllViews();
 }
@@ -72,6 +109,93 @@ async function loadSampleSession() {
   }
 }
 
+async function loadSessionsList() {
+  const select = document.getElementById("select-session-name");
+  if (!select) return;
+  try {
+    const res = await fetch("/api/session/list");
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data)) {
+      setOutput(data?.error || "Не удалось загрузить список сессий");
+      return;
+    }
+
+    const parseSessionName = (name) => {
+      const raw = String(name || "").trim();
+      // Новый формат хранения: base__YYYY-MM-DD__HH-MM
+      let m = raw.match(/^(.*)__(\d{4})-(\d{2})-(\d{2})__(\d{2})-(\d{2})$/);
+      if (m) {
+        const base = m[1];
+        const yyyy = m[2];
+        const mm = m[3];
+        const dd = m[4];
+        const hh = m[5];
+        const mi = m[6];
+        const iso = `${yyyy}-${mm}-${dd}T${hh}:${mi}:00`;
+        const ts = Date.parse(iso);
+        const label = `${base} ${dd}.${mm}.${yyyy} ${hh}:${mi}`;
+        return { value: raw, label, ts: Number.isFinite(ts) ? ts : null };
+      }
+
+      // Старый формат: base_DD_MM_YYYY_HH_MM
+      m = raw.match(/^(.*)_(\d{2})_(\d{2})_(\d{4})_(\d{2})_(\d{2})$/);
+      if (m) {
+        const base = m[1];
+        const dd = m[2];
+        const mm = m[3];
+        const yyyy = m[4];
+        const hh = m[5];
+        const mi = m[6];
+        const iso = `${yyyy}-${mm}-${dd}T${hh}:${mi}:00`;
+        const ts = Date.parse(iso);
+        const label = `${base} ${dd}.${mm}.${yyyy} ${hh}:${mi}`;
+        return { value: raw, label, ts: Number.isFinite(ts) ? ts : null };
+      }
+
+      // Человеко-читаемый формат: base DD.MM.YYYY HH:MM
+      m = raw.match(/^(.*)\s+(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})$/);
+      if (m) {
+        const base = m[1];
+        const dd = m[2];
+        const mm = m[3];
+        const yyyy = m[4];
+        const hh = m[5];
+        const mi = m[6];
+        const iso = `${yyyy}-${mm}-${dd}T${hh}:${mi}:00`;
+        const ts = Date.parse(iso);
+        return { value: raw, label: raw, ts: Number.isFinite(ts) ? ts : null };
+      }
+
+      return { value: raw, label: raw, ts: null };
+    };
+
+    const sorted = data
+      .map(parseSessionName)
+      .sort((a, b) => {
+        if (a.ts !== null && b.ts !== null) return b.ts - a.ts; // новые сверху
+        if (a.ts !== null) return -1;
+        if (b.ts !== null) return 1;
+        return a.label.localeCompare(b.label, "ru");
+      });
+
+    select.innerHTML = "";
+    sorted.forEach((item) => {
+      const opt = document.createElement("option");
+      opt.value = item.value;
+      opt.textContent = item.label;
+      select.appendChild(opt);
+    });
+    if (sorted.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Нет сохраненных сессий";
+      select.appendChild(opt);
+    }
+  } catch (e) {
+    setOutput("Ошибка загрузки списка сессий: " + e.message);
+  }
+}
+
 async function saveSession() {
   try {
     flushEditorsToSession();
@@ -81,7 +205,22 @@ async function saveSession() {
       return;
     }
     const nameInput = document.getElementById("input-session-name");
-    const baseNameRaw = nameInput?.value?.trim() || session?.meta?.name || "session";
+
+    const stripTrailingStamps = (value) => {
+      let out = String(value || "").trim();
+      // Удаляем один или несколько хвостов дат:
+      // 1) старый формат: _DD_MM_YYYY_HH_MM
+      // 2) новый формат: " DD.MM.YYYY HH:MM"
+      while (/_\d{2}_\d{2}_\d{4}_\d{2}_\d{2}$/.test(out) || /\s+\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/.test(out)) {
+        out = out
+          .replace(/_\d{2}_\d{2}_\d{4}_\d{2}_\d{2}$/, "")
+          .replace(/\s+\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/, "");
+      }
+      return out.trim();
+    };
+
+    const rawName = nameInput?.value?.trim() || session?.meta?.name || "session";
+    const baseNameRaw = stripTrailingStamps(rawName) || "session";
 
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, "0");
@@ -89,8 +228,8 @@ async function saveSession() {
     const yyyy = now.getFullYear();
     const hh = String(now.getHours()).padStart(2, "0");
     const min = String(now.getMinutes()).padStart(2, "0");
-    const stamp = `${dd}_${mm}_${yyyy}_${hh}_${min}`;
-    const fullName = `${baseNameRaw}_${stamp}`;
+    const stamp = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
+    const fullName = `${baseNameRaw} ${stamp}`;
 
     session.meta = session.meta || {};
     session.meta.name = fullName;
@@ -112,8 +251,11 @@ async function saveSession() {
     const data = await res.json();
     if (res.ok) {
       try {
-        localStorage.setItem("lastSessionName", fullName);
+        localStorage.setItem("lastSessionName", data?.name || fullName);
       } catch (_) {}
+      await loadSessionsList();
+      setOutput("сессия сохранена");
+      return;
     }
     setOutput(data);
   } catch (e) {
@@ -250,7 +392,8 @@ function syncSessionFromAosrHot() {
       template: String(row.шаблон || "").trim(),
       title: `АОСР №${order}`,
       order,
-      manual_override: true,
+      // Строки АОСР в таблице всегда участвуют в автопересчёте дат.
+      manual_override: false,
       start_date: startIso,
       end_date: endIso,
       pages: Number(previous.pages) || 1,
@@ -402,6 +545,10 @@ async function loadSessionByName(name) {
     throw new Error(JSON.stringify(data));
   }
   setSessionJson(data);
+  const select = document.getElementById("select-session-name");
+  if (select && name) {
+    select.value = name;
+  }
 }
 
 async function loadLastOrSampleSession() {
@@ -850,18 +997,99 @@ async function previewDocument() {
       body: JSON.stringify(body),
     });
     const data = await res.json();
-    setOutput(data);
+    if (!res.ok) {
+      setOutput(data);
+      return;
+    }
+    const url = data?.preview_url;
+    if (!url) {
+      setOutput("Предпросмотр сгенерирован, но ссылка не получена");
+      return;
+    }
+    showPreview(url);
+    setOutput("Предпросмотр открыт справа.");
   } catch (e) {
     setOutput("Ошибка предпросмотра: " + e.message);
   }
 }
 
+function applyPreviewZoom() {
+  const iframe = document.getElementById("preview-iframe");
+  if (!iframe) return;
+  iframe.style.transform = `scale(${previewZoom})`;
+  iframe.style.width = `${100 / previewZoom}%`;
+}
+
+function showPreview(url) {
+  const panel = document.getElementById("preview-panel");
+  const iframe = document.getElementById("preview-iframe");
+  if (!panel || !iframe) return;
+  panel.classList.remove("hidden");
+  previewZoom = 1;
+  applyPreviewZoom();
+  iframe.src = `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+}
+
 window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btn-load-sample").addEventListener("click", loadSampleSession);
-  document.getElementById("btn-save-session").addEventListener("click", saveSession);
-  document.getElementById("btn-calc-dates").addEventListener("click", calculateDates);
-  document.getElementById("btn-generate").addEventListener("click", generateDocuments);
-  document.getElementById("btn-preview").addEventListener("click", previewDocument);
+  const layout = document.querySelector("main.layout");
+  const btnToggleControls = document.getElementById("btn-toggle-controls");
+  if (layout && btnToggleControls) {
+    const key = "controlsCollapsed";
+    const applyState = (collapsed) => {
+      layout.classList.toggle("collapsed-controls", collapsed);
+      btnToggleControls.textContent = collapsed ? "▶" : "◀";
+      btnToggleControls.title = collapsed ? "Развернуть панель" : "Свернуть панель";
+    };
+    let collapsed = false;
+    try {
+      collapsed = localStorage.getItem(key) === "1";
+    } catch (_) {}
+    applyState(collapsed);
+    btnToggleControls.addEventListener("click", () => {
+      collapsed = !layout.classList.contains("collapsed-controls");
+      applyState(collapsed);
+      try {
+        localStorage.setItem(key, collapsed ? "1" : "0");
+      } catch (_) {}
+    });
+  }
+
+  const btnSaveSession = document.getElementById("btn-save-session");
+  if (btnSaveSession) btnSaveSession.addEventListener("click", saveSession);
+  const btnCalcDates = document.getElementById("btn-calc-dates");
+  if (btnCalcDates) btnCalcDates.addEventListener("click", calculateDates);
+  const btnGenerate = document.getElementById("btn-generate");
+  if (btnGenerate) btnGenerate.addEventListener("click", generateDocuments);
+  const btnPreview = document.getElementById("btn-preview");
+  if (btnPreview) btnPreview.addEventListener("click", previewDocument);
+  const btnPreviewZoomIn = document.getElementById("btn-preview-zoom-in");
+  const btnPreviewZoomOut = document.getElementById("btn-preview-zoom-out");
+  const btnPreviewZoomReset = document.getElementById("btn-preview-zoom-reset");
+  const btnPreviewHide = document.getElementById("btn-preview-hide");
+  if (btnPreviewZoomIn) {
+    btnPreviewZoomIn.addEventListener("click", () => {
+      previewZoom = Math.min(2.5, previewZoom + 0.1);
+      applyPreviewZoom();
+    });
+  }
+  if (btnPreviewZoomOut) {
+    btnPreviewZoomOut.addEventListener("click", () => {
+      previewZoom = Math.max(0.5, previewZoom - 0.1);
+      applyPreviewZoom();
+    });
+  }
+  if (btnPreviewZoomReset) {
+    btnPreviewZoomReset.addEventListener("click", () => {
+      previewZoom = 1;
+      applyPreviewZoom();
+    });
+  }
+  if (btnPreviewHide) {
+    btnPreviewHide.addEventListener("click", () => {
+      const panel = document.getElementById("preview-panel");
+      if (panel) panel.classList.add("hidden");
+    });
+  }
 
   // Вкладки
   document.querySelectorAll(".tab-button").forEach((btn) => {
@@ -977,25 +1205,24 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const btnLoadFile = document.getElementById("btn-load-file");
-  const fileInput = document.getElementById("file-input-session");
-  if (btnLoadFile && fileInput) {
-    btnLoadFile.addEventListener("click", () => fileInput.click());
-    fileInput.addEventListener("change", (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
+  const btnLoadSession = document.getElementById("btn-load-session");
+  if (btnLoadSession) {
+    btnLoadSession.addEventListener("click", async () => {
+      const select = document.getElementById("select-session-name");
+      const name = select?.value?.trim();
+      if (!name) {
+        setOutput("Выберите сессию для загрузки");
+        return;
+      }
+      try {
+        await loadSessionByName(name);
+        setOutput(`Сессия загружена: ${name}`);
         try {
-          const text = evt.target.result;
-          const data = JSON.parse(text);
-          setSessionJson(data);
-          setOutput(`Сессия загружена из файла: ${file.name}`);
-        } catch (err) {
-          setOutput("Ошибка чтения файла сессии: " + err.message);
-        }
-      };
-      reader.readAsText(file, "utf-8");
+          localStorage.setItem("lastSessionName", name);
+        } catch (_) {}
+      } catch (e) {
+        setOutput("Ошибка загрузки сессии: " + e.message);
+      }
     });
   }
 
@@ -1008,10 +1235,9 @@ window.addEventListener("DOMContentLoaded", () => {
       const yyyy = now.getFullYear();
       const hh = String(now.getHours()).padStart(2, "0");
       const min = String(now.getMinutes()).padStart(2, "0");
-      const stamp = `${dd}_${mm}_${yyyy}_${hh}_${min}`;
-
-      const baseName = "Новая_сессия";
-      const fullName = `${baseName}_${stamp}`;
+      const stamp = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
+      const baseName = "Новая сессия";
+      const fullName = `${baseName} ${stamp}`;
 
       currentSession = {
         meta: {
@@ -1028,12 +1254,13 @@ window.addEventListener("DOMContentLoaded", () => {
       try {
         localStorage.removeItem("lastSessionName");
       } catch (_) {}
+      ensureDefaultConstantFields(currentSession);
       renderAllViews();
       setOutput("Создана новая пустая сессия.");
     });
   }
 
-  // Автозагрузка: сначала последняя сохранённая сессия, иначе sample.
+  // Автозагрузка: сначала список сессий и последняя сохранённая, иначе sample.
   loadTemplates();
-  loadLastOrSampleSession();
+  loadSessionsList().then(() => loadLastOrSampleSession());
 });

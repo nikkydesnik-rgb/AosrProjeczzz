@@ -1,18 +1,69 @@
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from core import date_engine, errors, registry, renderer, session_manager, template_manager
 from core.session_manager import Session
-from core.utils import normalize_filename
+from core.utils import build_session_storage_name, normalize_filename, normalize_session_name
 
 # Локальное веб‑приложение для генерации комплектов исполнительной документации.
 # Детали бизнес‑логики реализуются в модулях core/*.
 
 
 BASE_DIR = Path(__file__).resolve().parent
+RU_MONTHS_GEN = {
+    1: "января",
+    2: "февраля",
+    3: "марта",
+    4: "апреля",
+    5: "мая",
+    6: "июня",
+    7: "июля",
+    8: "августа",
+    9: "сентября",
+    10: "октября",
+    11: "ноября",
+    12: "декабря",
+}
+
+
+def _parse_any_date(value):
+    if not value:
+        return None
+    v = str(value).strip()
+    for fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(v, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _augment_doc_context(context: dict, doc: dict) -> dict:
+    """Добавляет производные поля для шаблонов АОСР по логике Nik66."""
+    start_dt = _parse_any_date(context.get("Начало")) or _parse_any_date(doc.get("start_date"))
+    end_dt = _parse_any_date(context.get("Конец")) or _parse_any_date(doc.get("end_date"))
+
+    if start_dt:
+        context.setdefault("Начало", start_dt.strftime("%d.%m.%Y"))
+        context["Чнач"] = str(start_dt.day)
+        context["Мнач"] = RU_MONTHS_GEN.get(start_dt.month, "")
+        context["Гн"] = str(start_dt.year)
+    if end_dt:
+        context.setdefault("Конец", end_dt.strftime("%d.%m.%Y"))
+        context["Ч"] = str(end_dt.day)
+        context["М"] = RU_MONTHS_GEN.get(end_dt.month, "")
+        context["Г"] = str(end_dt.year)
+        context["date_end"] = end_dt.strftime("%Y-%m-%d")
+
+    # Совместимость с коротким плейсхолдером из старого шаблона.
+    if context.get("Разрешает_пр_во_работ_по") and not context.get("Разрешает_пр"):
+        context["Разрешает_пр"] = context.get("Разрешает_пр_во_работ_по")
+
+    return context
 
 
 def create_app() -> Flask:
@@ -47,6 +98,12 @@ def create_app() -> Flask:
     def get_session_file(filename: str):
         return send_from_directory(BASE_DIR / "sessions", filename, as_attachment=False)
 
+    @app.get("/tmp_previews/<session_name>/<path:filename>")
+    def get_preview_file(session_name: str, filename: str):
+        """Отдача сгенерированных preview PDF для встроенного viewer."""
+        safe_session = normalize_filename(session_name)
+        return send_from_directory(BASE_DIR / "tmp_previews" / safe_session, filename, as_attachment=False)
+
     # --- Сессии ------------------------------------------------------------
 
     @app.post("/api/session/load")
@@ -62,14 +119,24 @@ def create_app() -> Flask:
         name = data.get("name")
         if not name:
             return jsonify({"error": "Field 'name' is required"}), 400
+        normalized = normalize_session_name(name)
+        candidates = [normalized]
+        storage_candidate = build_session_storage_name(normalized)
+        if storage_candidate not in candidates:
+            candidates.append(storage_candidate)
 
-        try:
-            sess = session_manager.load_session(name)
-        except FileNotFoundError:
+        sess = None
+        for candidate in candidates:
+            try:
+                sess = session_manager.load_session(candidate)
+                break
+            except FileNotFoundError:
+                continue
+            except Exception as e:  # pragma: no cover - защитный код
+                errors.handle_error(e, {"endpoint": "api_load_session"})
+                return jsonify({"error": "Failed to load session"}), 500
+        if sess is None:
             return jsonify({"error": "Session not found", "name": name}), 404
-        except Exception as e:  # pragma: no cover - защитный код
-            errors.handle_error(e, {"endpoint": "api_load_session"})
-            return jsonify({"error": "Failed to load session"}), 500
 
         return jsonify(sess.raw)
 
@@ -92,13 +159,24 @@ def create_app() -> Flask:
         try:
             sess = Session(raw=session_data)
             if name:
-                name = normalize_filename(name)
+                name = normalize_session_name(name)
+                name = build_session_storage_name(name)
             path = session_manager.save_session(sess, name=name)
         except Exception as e:  # pragma: no cover
             errors.handle_error(e, {"endpoint": "api_save_session"})
             return jsonify({"error": "Failed to save session"}), 500
 
-        return jsonify({"status": "ok", "path": str(path)})
+        return jsonify({"status": "ok", "path": str(path), "name": path.stem})
+
+    @app.get("/api/session/list")
+    def api_list_sessions():
+        """Список сохраненных сессий (имена файлов без .json)."""
+        try:
+            names = session_manager.list_sessions()
+        except Exception as e:  # pragma: no cover
+            errors.handle_error(e, {"endpoint": "api_list_sessions"})
+            return jsonify({"error": "Failed to list sessions"}), 500
+        return jsonify(names)
 
     # --- Даты --------------------------------------------------------------
 
@@ -170,6 +248,7 @@ def create_app() -> Flask:
             context = {}
             context.update(sess.raw.get("constant_fields") or {})
             context.update(doc.get("data") or {})
+            context = _augment_doc_context(context, doc)
 
             try:
                 renderer.render_docx(template_path, context, out_docx)
@@ -238,6 +317,7 @@ def create_app() -> Flask:
         context = {}
         context.update(sess.raw.get("constant_fields") or {})
         context.update(target_doc.get("data") or {})
+        context = _augment_doc_context(context, target_doc)
 
         try:
             renderer.render_docx(template_path, context, out_docx)
@@ -246,7 +326,8 @@ def create_app() -> Flask:
             errors.handle_error(e, {"endpoint": "api_preview_document", "doc_id": doc_id})
             return jsonify({"error": "Failed to generate preview"}), 500
 
-        return jsonify({"status": "ok", "pdf": str(out_pdf)})
+        preview_url = f"/tmp_previews/{session_name}/{out_pdf.name}"
+        return jsonify({"status": "ok", "pdf": str(out_pdf), "preview_url": preview_url})
 
     # --- Шаблоны ------------------------------------------------------------
 

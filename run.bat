@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 REM Запуск локального веб-приложения генератора исполнительной документации
 REM Скрипт создаёт venv (если нет), устанавливает зависимости и запускает app.py.
 
@@ -12,7 +13,8 @@ if not exist ".venv" (
 call ".venv\Scripts\activate.bat"
 
 echo Устанавливаю зависимости ...
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+pip install --retries 10 --timeout 120 --no-cache-dir -r requirements.txt
 
 echo Запускаю приложение ...
 start "" "http://127.0.0.1:5000/"

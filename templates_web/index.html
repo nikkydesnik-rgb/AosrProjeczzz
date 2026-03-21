@@ -13,18 +13,20 @@
   </header>
 
   <main class="layout">
-    <section class="controls">
-      <h2>Сессия</h2>
+    <section class="controls" id="controls-panel">
+      <div class="controls-header">
+        <h2>Сессия</h2>
+        <button id="btn-toggle-controls" type="button" title="Свернуть/развернуть панель">◀</button>
+      </div>
       <div class="buttons-row">
         <input type="text" id="input-session-name" placeholder="Имя сессии (без даты)" />
         <button id="btn-save-session">Сохранить сессию</button>
-      </div>
-      <div class="buttons-row">
-        <button id="btn-load-file">Загрузить файл...</button>
-        <button id="btn-load-sample">Загрузить sample_session.json</button>
         <button id="btn-new-session">Новая сессия</button>
       </div>
-      <input type="file" id="file-input-session" accept=".json,application/json" style="display:none" />
+      <div class="buttons-row">
+        <select id="select-session-name"></select>
+        <button id="btn-load-session">Загрузить</button>
+      </div>
 
       <h3>Пересчёт дат</h3>
       <div class="dates-row">
@@ -206,6 +208,20 @@
     <section class="output">
       <h2>Результат</h2>
       <pre id="output-log"></pre>
+      <div id="preview-panel" class="preview-panel hidden">
+        <div class="preview-toolbar">
+          <span>Предпросмотр PDF</span>
+          <div class="preview-actions">
+            <button id="btn-preview-zoom-out" type="button">-</button>
+            <button id="btn-preview-zoom-reset" type="button">100%</button>
+            <button id="btn-preview-zoom-in" type="button">+</button>
+            <button id="btn-preview-hide" type="button">Скрыть</button>
+          </div>
+        </div>
+        <div id="preview-viewport" class="preview-viewport">
+          <iframe id="preview-iframe" title="PDF предпросмотр"></iframe>
+        </div>
+      </div>
     </section>
   </main>
 

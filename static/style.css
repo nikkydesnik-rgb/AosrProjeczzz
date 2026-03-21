@@ -31,6 +31,10 @@ body {
   height: calc(100vh - 64px);
 }
 
+.layout.collapsed-controls {
+  grid-template-columns: 56px 2fr 1.1fr;
+}
+
 section {
   background: #ffffff;
   border-radius: 8px;
@@ -52,6 +56,55 @@ section h3 {
 
 .controls label {
   font-size: 13px;
+}
+
+.controls {
+  min-width: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+#btn-toggle-controls {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  padding: 0;
+  line-height: 1;
+}
+
+.layout.collapsed-controls .controls {
+  padding: 8px;
+  overflow: visible;
+  position: relative;
+}
+
+.layout.collapsed-controls .controls > :not(.controls-header) {
+  display: none;
+}
+
+.layout.collapsed-controls .controls-header h2 {
+  display: none;
+}
+
+.layout.collapsed-controls .controls-header {
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.layout.collapsed-controls #btn-toggle-controls {
+  transform: rotate(180deg);
+  position: absolute;
+  top: 0;
+  right: -14px;
+  z-index: 20;
 }
 
 #input-session-name {
@@ -121,7 +174,7 @@ input[type="text"] {
 }
 
 pre#output-log {
-  flex: 1;
+  flex: 0 0 180px;
   margin: 0;
   border-radius: 6px;
   background: #111827;
@@ -129,6 +182,54 @@ pre#output-log {
   padding: 8px;
   font-size: 12px;
   overflow: auto;
+}
+
+.preview-panel {
+  margin-top: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+}
+
+.preview-panel.hidden {
+  display: none;
+}
+
+.preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.preview-actions button {
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.preview-viewport {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  background: #f3f4f6;
+}
+
+#preview-iframe {
+  width: 100%;
+  height: 520px;
+  border: 0;
+  transform-origin: top left;
 }
 
 .tabs {

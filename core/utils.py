@@ -15,6 +15,8 @@ from typing import Iterable
 
 
 FILENAME_SAFE_PATTERN = re.compile(r"[^A-Za-z0-9_.-]+")
+SESSION_FORBIDDEN_PATTERN = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
+DISPLAY_STAMP_PATTERN = re.compile(r"^(?P<base>.+?)\s+(?P<dd>\d{2})\.(?P<mm>\d{2})\.(?P<yyyy>\d{4})\s+(?P<hh>\d{2}):(?P<mi>\d{2})$")
 
 
 def normalize_filename(value: str, max_length: int = 100) -> str:
@@ -33,6 +35,50 @@ def normalize_filename(value: str, max_length: int = 100) -> str:
     if not cleaned:
         cleaned = "file"
     return cleaned[:max_length]
+
+
+def normalize_session_name(value: str, max_length: int = 120) -> str:
+    """Нормализация имени сессии с сохранением читаемого формата.
+
+    В отличие от normalize_filename, здесь сохраняются пробелы, точки и
+    национальные символы (например, кириллица), чтобы имя в UI и на диске
+    выглядело одинаково: "тест1 21.03.2026 20:03".
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return "session"
+
+    # На Windows запрещены: <>:"/\|?* и управляющие символы.
+    cleaned = SESSION_FORBIDDEN_PATTERN.sub("_", raw)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    # Имя файла не должно заканчиваться точкой или пробелом.
+    cleaned = cleaned.rstrip(" .")
+    if not cleaned:
+        cleaned = "session"
+    return cleaned[:max_length]
+
+
+def build_session_storage_name(display_name: str, max_length: int = 160) -> str:
+    """Преобразует отображаемое имя в сортируемое имя файла.
+
+    Пример:
+    - display: "тест1 21.03.2026 20:03"
+    - storage: "тест1__2026-03-21__20-03"
+    """
+    display = normalize_session_name(display_name, max_length=max_length)
+    m = DISPLAY_STAMP_PATTERN.match(display)
+    if not m:
+        return display
+
+    base = normalize_session_name(m.group("base"), max_length=max_length)
+    yyyy = m.group("yyyy")
+    mm = m.group("mm")
+    dd = m.group("dd")
+    hh = m.group("hh")
+    mi = m.group("mi")
+    storage = f"{base}__{yyyy}-{mm}-{dd}__{hh}-{mi}"
+    return normalize_session_name(storage, max_length=max_length)
 
 
 def parse_iso_date(value: str | None) -> date | None:

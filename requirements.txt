@@ -3,10 +3,6 @@ docxtpl>=0.16.0
 docx2pdf>=0.1.8
 pypdf>=4.0.0
 python-dateutil>=2.9.0
-
-Flask
-docxtpl
 pandas
-docx2pdf
 python-docx
 pywin32
