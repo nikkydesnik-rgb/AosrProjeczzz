@@ -237,3 +237,24 @@ textarea#template-meta-text {
   color: #6b7280;
 }
 
+
+
+.table-scroll-x {
+  overflow-x: auto;
+}
+
+#aosr-hot-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+#aosr-hot {
+  width: 100%;
+}
+
+#aosr-hot .handsontable td,
+#aosr-hot .handsontable th {
+  font-size: 12px;
+}

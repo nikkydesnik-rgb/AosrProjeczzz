@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Генератор исполнительной документации (демо)</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css" rel="stylesheet" />
 </head>
 <body>
   <header class="app-header">
@@ -111,20 +112,14 @@
 
         <div id="tab-aosr" class="tab-panel">
           <h2>АОСР</h2>
-          <p class="hint">Список актов АОСР по текущей сессии.</p>
-          <table class="simple-table" id="aosr-table">
-            <thead>
-              <tr>
-                <th>order</th>
-                <th>id</th>
-                <th>Название</th>
-                <th>Начало</th>
-                <th>Окончание</th>
-                <th>manual_override</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+          <p class="hint">Интерактивная таблица реестра АОСР (Handsontable): изменения автоматически сериализуются в сессию.</p>
+          <div class="buttons-row">
+            <button id="btn-add-aosr-row" type="button">Добавить акт (строку)</button>
+            <button id="btn-delete-aosr-selected" type="button">Удалить отмеченные</button>
+          </div>
+          <div id="aosr-hot-wrapper">
+            <div id="aosr-hot"></div>
+          </div>
         </div>
 
         <div id="tab-other" class="tab-panel">
@@ -178,6 +173,7 @@
         <div id="tab-templates" class="tab-panel">
           <h2>Шаблоны (.docx)</h2>
           <p class="hint">Список шаблонов в папке templates. Для файлов без .json можно сгенерировать metadata.</p>
+          <p class="hint">После генерации metadata можно добавить шаблон в реестр: для шаблонов с <code>multiple=true</code> будет предложено количество актов. Ключи разделяются на постоянные и по-актовые.</p>
           <table class="simple-table" id="templates-table">
             <thead>
               <tr>
@@ -185,6 +181,7 @@
                 <th>Название</th>
                 <th>Тип</th>
                 <th>Есть metadata</th>
+                <th>В реестр</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -212,7 +209,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>
-

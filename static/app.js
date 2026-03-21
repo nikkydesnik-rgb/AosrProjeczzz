@@ -1,6 +1,8 @@
 let currentSession = null;
 let templatesCache = [];
 let currentTemplateName = null;
+let aosrHot = null;
+let syncingFromHot = false;
 
 async function fetchText(path) {
   const res = await fetch(path);
@@ -49,6 +51,10 @@ function getSessionJson() {
   return currentSession;
 }
 
+function flushEditorsToSession() {
+  syncSessionFromAosrHot();
+}
+
 function setSessionJson(obj) {
   currentSession = obj;
   syncTextareaFromSession();
@@ -68,6 +74,7 @@ async function loadSampleSession() {
 
 async function saveSession() {
   try {
+    flushEditorsToSession();
     const session = getSessionJson();
     if (!session) {
       setOutput("Нет данных сессии для сохранения");
@@ -82,9 +89,8 @@ async function saveSession() {
     const yyyy = now.getFullYear();
     const hh = String(now.getHours()).padStart(2, "0");
     const min = String(now.getMinutes()).padStart(2, "0");
-    const stamp = `${dd}.${mm}.${yyyy} ${hh}.${min}`; // День.месяц.год час.минута
-
-    const fullName = `${baseNameRaw} ${stamp}`;
+    const stamp = `${dd}_${mm}_${yyyy}_${hh}_${min}`;
+    const fullName = `${baseNameRaw}_${stamp}`;
 
     session.meta = session.meta || {};
     session.meta.name = fullName;
@@ -164,26 +170,151 @@ function renderMaterials() {
 }
 
 function renderAosr() {
-  const session = getSessionJson();
-  const tbody = document.querySelector("#aosr-table tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-  if (!session) return;
-  const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-  docs
+  initAosrHot();
+  if (!aosrHot) return;
+  syncingFromHot = true;
+  aosrHot.loadData(buildAosrRowsFromSession(getSessionJson()));
+  syncingFromHot = false;
+}
+
+function isoToRuDate(value) {
+  const v = String(value || "").trim();
+  if (!v) return "";
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return v;
+  return `${m[3]}.${m[2]}.${m[1]}`;
+}
+
+function ruToIsoDate(value) {
+  const v = String(value || "").trim();
+  if (!v) return null;
+  const m = v.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+function buildAosrRowsFromSession(session) {
+  if (!session) return [];
+  const docs = (session.documents || [])
     .filter((d) => (d.type || "").trim() === "АОСР")
-    .forEach((d) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${d.order ?? ""}</td>
-        <td>${d.id ?? ""}</td>
-        <td>${d.title ?? ""}</td>
-        <td>${d.start_date ?? ""}</td>
-        <td>${d.end_date ?? ""}</td>
-        <td>${d.manual_override ? "✓" : ""}</td>
-      `;
-      tbody.appendChild(tr);
+    .slice()
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  return docs.map((d) => {
+    const data = d.data || {};
+    return {
+      selected: false,
+      шаблон: d.template || "",
+      номер: data.номер || String(d.order || ""),
+      Наименование_работ: data.Наименование_работ || "",
+      Начало: data.Начало || isoToRuDate(d.start_date),
+      Конец: data.Конец || isoToRuDate(d.end_date),
+      Материалы_и_серты: data.Материалы_и_серты || "",
+      Схемы_и_тд: data.Схемы_и_тд || "",
+      Разрешает_пр_во_работ_по: data.Разрешает_пр_во_работ_по || "",
+      СП: data.СП || "",
+      _docId: d.id || "",
+    };
+  });
+}
+
+function syncSessionFromAosrHot() {
+  if (!aosrHot || syncingFromHot) return;
+  const session = getSessionJson();
+  if (!session) return;
+
+  const prevDocs = session.documents || [];
+  const byId = new Map(prevDocs.map((d) => [d.id, d]));
+  const nonAosr = prevDocs.filter((d) => (d.type || "").trim() !== "АОСР");
+
+  const rows = aosrHot.getSourceData();
+  const aosrDocs = [];
+  rows.forEach((row, index) => {
+    const isEmpty =
+      !String(row?.шаблон || "").trim() &&
+      !String(row?.номер || "").trim() &&
+      !String(row?.Наименование_работ || "").trim() &&
+      !String(row?.Материалы_и_серты || "").trim();
+    if (isEmpty) return;
+
+    const previous = byId.get(row._docId) || {};
+    const parsedOrder = Number.parseInt(row.номер, 10);
+    const order = Number.isFinite(parsedOrder) && parsedOrder > 0 ? parsedOrder : index + 1;
+    const id = row._docId || previous.id || buildUniqueDocId({ documents: [...nonAosr, ...aosrDocs] }, "AOSR");
+    const startIso = ruToIsoDate(row.Начало);
+    const endIso = ruToIsoDate(row.Конец);
+
+    aosrDocs.push({
+      id,
+      type: "АОСР",
+      template: String(row.шаблон || "").trim(),
+      title: `АОСР №${order}`,
+      order,
+      manual_override: true,
+      start_date: startIso,
+      end_date: endIso,
+      pages: Number(previous.pages) || 1,
+      data: {
+        номер: String(row.номер || order),
+        Наименование_работ: String(row.Наименование_работ || ""),
+        Начало: String(row.Начало || ""),
+        Конец: String(row.Конец || ""),
+        Материалы_и_серты: String(row.Материалы_и_серты || ""),
+        Схемы_и_тд: String(row.Схемы_и_тд || ""),
+        Разрешает_пр_во_работ_по: String(row.Разрешает_пр_во_работ_по || ""),
+        СП: String(row.СП || ""),
+      },
     });
+  });
+
+  session.documents = [...nonAosr, ...aosrDocs];
+  syncAosrOrderByNumber(session);
+}
+
+function initAosrHot() {
+  if (aosrHot) return;
+  const container = document.getElementById("aosr-hot");
+  if (!container || !window.Handsontable) return;
+
+  aosrHot = new Handsontable(container, {
+    data: [],
+    stretchH: "all",
+    rowHeaders: true,
+    height: 360,
+    colHeaders: [
+      "✓",
+      "Шаблон",
+      "Номер",
+      "Наименование работ",
+      "Начало",
+      "Конец",
+      "Материалы и серты",
+      "Схемы и тд",
+      "Разрешает пр-во работ по",
+      "СП",
+    ],
+    columns: [
+      { data: "selected", type: "checkbox", width: 36 },
+      { data: "шаблон", type: "dropdown", source: (templatesCache || []).map((t) => t.docx_name), width: 140 },
+      { data: "номер", type: "text", width: 80 },
+      { data: "Наименование_работ", type: "text", width: 220 },
+      { data: "Начало", type: "date", dateFormat: "DD.MM.YYYY", correctFormat: true, width: 120 },
+      { data: "Конец", type: "date", dateFormat: "DD.MM.YYYY", correctFormat: true, width: 120 },
+      { data: "Материалы_и_серты", type: "text", width: 220 },
+      { data: "Схемы_и_тд", type: "text", width: 180 },
+      { data: "Разрешает_пр_во_работ_по", type: "text", width: 230 },
+      { data: "СП", type: "text", width: 190 },
+    ],
+    contextMenu: true,
+    manualColumnResize: true,
+    licenseKey: "non-commercial-and-evaluation",
+    afterChange(changes, source) {
+      if (!changes || source === "loadData") return;
+      syncSessionFromAosrHot();
+      renderRegistry();
+      syncTextareaFromSession();
+    },
+  });
 }
 
 function renderOtherDocs() {
@@ -302,6 +433,22 @@ async function loadTemplates() {
     }
     templatesCache = data;
     renderTemplates();
+    if (aosrHot) {
+      aosrHot.updateSettings({
+        columns: [
+          { data: "selected", type: "checkbox", width: 36 },
+          { data: "шаблон", type: "dropdown", source: (templatesCache || []).map((t) => t.docx_name), width: 140 },
+          { data: "номер", type: "text", width: 80 },
+          { data: "Наименование_работ", type: "text", width: 220 },
+          { data: "Начало", type: "date", dateFormat: "DD.MM.YYYY", correctFormat: true, width: 120 },
+          { data: "Конец", type: "date", dateFormat: "DD.MM.YYYY", correctFormat: true, width: 120 },
+          { data: "Материалы_и_серты", type: "text", width: 220 },
+          { data: "Схемы_и_тд", type: "text", width: 180 },
+          { data: "Разрешает_пр_во_работ_по", type: "text", width: 230 },
+          { data: "СП", type: "text", width: 190 },
+        ],
+      });
+    }
   } catch (e) {
     setOutput("Ошибка загрузки шаблонов: " + e.message);
   }
@@ -320,6 +467,11 @@ function renderTemplates() {
       <td>${t.metadata?.type || ""}</td>
       <td>${hasMeta ? "Да" : "Нет"}</td>
       <td>
+        <button type="button" class="btn-add-template" data-docx="${t.docx_name}" ${hasMeta ? "" : "disabled"}>
+          Добавить в реестр
+        </button>
+      </td>
+      <td>
         <button type="button" class="btn-build-meta" data-docx="${t.docx_name}">
           ${hasMeta ? "Пересоздать" : "Сгенерировать"} metadata
         </button>
@@ -327,6 +479,226 @@ function renderTemplates() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+
+function getTemplateFieldScopes(meta) {
+  const fields = meta?.fields || {};
+  const allKeys = Object.keys(fields);
+  const constantKeysFromMeta = Array.isArray(meta?.constant_fields_order) ? meta.constant_fields_order : [];
+  const docKeysFromMeta = Array.isArray(meta?.doc_fields_order) ? meta.doc_fields_order : [];
+
+  const normalize = (v) => String(v || "").trim();
+  const known = new Set(allKeys);
+
+  const constantKeys = constantKeysFromMeta.map(normalize).filter((k) => k && known.has(k));
+  const docKeys = docKeysFromMeta.map(normalize).filter((k) => k && known.has(k));
+
+  // fallback для старых metadata без разделения
+  if (constantKeys.length === 0 && docKeys.length === 0) {
+    const knownConstant = new Set([
+      "Объект", "Застройщик", "Строитель", "Проектная_организация", "Проект_или_ТЗ",
+      "Представитель_застр", "ФИО_застр", "Распор_застр", "Пр_раб", "ФИО_Пр_раб",
+      "Распор_пр_раб", "Строй_контроль_Должность", "ФИО_Стройк", "Распор_стройк",
+      "Проектировщик_должность", "Проектировщик_ФИО", "Распоряжение_проект", "Выполнил_работы",
+      "Иные_долж", "ФИО_Иные", "Распор_иные", "Организация_исполнитель", "Экз",
+    ]);
+    const knownDoc = new Set([
+      "номер", "Наименование_работ", "Начало", "Конец", "Материалы_и_серты", "Схемы_и_тд",
+      "Разрешает_пр_во_работ_по", "СП", "Ч", "М", "Г", "Чнач", "Мнач", "Гн", "date_end",
+    ]);
+    const docSpecificWords = ["материал", "серт", "прилож", "схем", "черт", "испыт", "наименование_работ"];
+
+    const guessedConst = [];
+    const guessedDoc = [];
+    allKeys.forEach((key) => {
+      if (knownConstant.has(key)) {
+        guessedConst.push(key);
+        return;
+      }
+      if (knownDoc.has(key)) {
+        guessedDoc.push(key);
+        return;
+      }
+      const low = key.toLowerCase();
+      const isDocSpecific = docSpecificWords.some((w) => low.includes(w));
+      if (isDocSpecific) {
+        guessedDoc.push(key);
+      } else {
+        guessedConst.push(key);
+      }
+    });
+    return { allKeys, constantKeys: guessedConst, docKeys: guessedDoc };
+  }
+
+  // если один из списков пуст, достраиваем остатком полей в исходном порядке
+  const used = new Set([...constantKeys, ...docKeys]);
+  allKeys.forEach((key) => {
+    if (used.has(key)) return;
+    if (constantKeys.length === 0) {
+      constantKeys.push(key);
+    } else {
+      docKeys.push(key);
+    }
+  });
+
+  return { allKeys, constantKeys, docKeys };
+}
+
+function mergeTemplateFieldsToConstantFields(fieldKeys) {
+  if (!fieldKeys || fieldKeys.length === 0) return;
+  const session = getSessionJson() || {};
+  const cf = session.constant_fields || {};
+  const newCf = {};
+
+  // Сначала ключи из шаблона, в порядке появления
+  fieldKeys.forEach((key) => {
+    newCf[key] = key in cf ? cf[key] : "";
+  });
+
+  // Затем все прочие ключи, которые уже были в сессии
+  Object.keys(cf).forEach((key) => {
+    if (!fieldKeys.includes(key)) {
+      newCf[key] = cf[key];
+    }
+  });
+
+  session.constant_fields = newCf;
+  setSessionJson(session);
+}
+
+function nextDocumentOrder(session) {
+  const docs = session.documents || [];
+  if (docs.length === 0) return 1;
+  const maxOrder = docs.reduce((acc, d) => Math.max(acc, Number(d.order) || 0), 0);
+  return maxOrder + 1;
+}
+
+function buildUniqueDocId(session, prefix) {
+  const normalizedPrefix = (prefix || "DOC").replace(/\s+/g, "_").toUpperCase();
+  const used = new Set((session.documents || []).map((d) => d.id));
+  let idx = 1;
+  let candidate = `${normalizedPrefix}_${idx}`;
+  while (used.has(candidate)) {
+    idx += 1;
+    candidate = `${normalizedPrefix}_${idx}`;
+  }
+  return candidate;
+}
+
+function syncAosrOrderByNumber(session) {
+  const docs = session.documents || [];
+  docs.forEach((doc) => {
+    if ((doc.type || "").trim() !== "АОСР") return;
+    const n = Number.parseInt(doc?.data?.номер, 10);
+    if (Number.isFinite(n) && n > 0) {
+      doc.order = n;
+      if (!doc.title || /^АОСР\s*№/i.test(doc.title)) {
+        doc.title = `АОСР №${n}`;
+      }
+    }
+  });
+}
+
+function detectAosrTemplateName(session) {
+  const docs = session.documents || [];
+  const existingAosr = docs.find((d) => (d.type || "").trim() === "АОСР" && d.template);
+  if (existingAosr?.template) return existingAosr.template;
+
+  const fromCache = (templatesCache || []).find((t) => (t.metadata?.type || "").trim() === "АОСР");
+  if (fromCache?.docx_name) return fromCache.docx_name;
+
+  return "";
+}
+
+function addAosrRow() {
+  const session = getSessionJson() || {};
+  session.documents = session.documents || [];
+
+  const nextNumber = (session.documents || [])
+    .filter((d) => (d.type || "").trim() === "АОСР")
+    .reduce((acc, d) => Math.max(acc, Number.parseInt(d?.data?.номер, 10) || 0), 0) + 1;
+
+  const doc = {
+    id: buildUniqueDocId(session, "AOSR"),
+    type: "АОСР",
+    template: detectAosrTemplateName(session),
+    title: `АОСР №${nextNumber}`,
+    order: nextNumber,
+    manual_override: false,
+    start_date: null,
+    end_date: null,
+    pages: 1,
+    data: {
+      номер: String(nextNumber),
+      Наименование_работ: "",
+      Материалы_и_серты: "",
+      Схемы_и_тд: "",
+      Разрешает_пр_во_работ_по: "",
+      СП: "",
+    },
+  };
+
+  session.documents.push(doc);
+  syncAosrOrderByNumber(session);
+  setSessionJson(session);
+  setOutput(`Добавлен акт АОСР №${nextNumber}`);
+}
+
+function addTemplateToRegistry(docxName) {
+  const template = (templatesCache || []).find((t) => t.docx_name === docxName);
+  if (!template || !template.metadata) {
+    setOutput("Для добавления в реестр сначала сгенерируйте metadata шаблона.");
+    return;
+  }
+
+  const session = getSessionJson() || {};
+  session.documents = session.documents || [];
+
+  const meta = template.metadata;
+  let count = 1;
+  if (meta.multiple) {
+    const answer = window.prompt(`Шаблон «${meta.display_name || docxName}» допускает множественные документы. Сколько добавить?`, "1");
+    if (answer === null) return;
+    count = Math.max(1, Number.parseInt(answer, 10) || 1);
+  }
+
+  const { allKeys, constantKeys, docKeys } = getTemplateFieldScopes(meta);
+  mergeTemplateFieldsToConstantFields(constantKeys);
+
+  for (let i = 0; i < count; i += 1) {
+    const order = nextDocumentOrder(session);
+    const seq = i + 1;
+    const data = {};
+    const docDataKeys = docKeys.length > 0 ? docKeys : allKeys;
+    docDataKeys.forEach((key) => {
+      data[key] = "";
+    });
+    if ("номер" in data) {
+      data.номер = String(order);
+    }
+
+    const type = meta.type || "GENERIC";
+    const titleBase = meta.display_name || docxName.replace(/\.docx$/i, "");
+    const title = count > 1 ? `${titleBase} №${seq}` : titleBase;
+
+    session.documents.push({
+      id: buildUniqueDocId(session, meta.prefix || type || "DOC"),
+      type,
+      template: docxName,
+      title,
+      order,
+      manual_override: false,
+      start_date: null,
+      end_date: null,
+      pages: Number(meta.default_pages) || 1,
+      data,
+    });
+  }
+
+  syncAosrOrderByNumber(session);
+  setSessionJson(session);
+  setOutput(`Добавлено документов по шаблону: ${count}`);
 }
 
 async function buildMetadataForTemplate(docxName) {
@@ -353,28 +725,8 @@ async function buildMetadataForTemplate(docxName) {
 
     // Автоматически добавляем вытянутые ключи в блок "Постоянные данные"
     // и переупорядочиваем их в том порядке, как они идут в шаблоне.
-    const fields = (data.metadata && data.metadata.fields) || {};
-    const fieldKeys = Object.keys(fields || {});
-    if (fieldKeys.length > 0) {
-      const session = getSessionJson() || {};
-      const cf = session.constant_fields || {};
-      const newCf = {};
-
-      // Сначала ключи из шаблона, в порядке появления
-      fieldKeys.forEach((key) => {
-        newCf[key] = key in cf ? cf[key] : "";
-      });
-
-      // Затем все прочие ключи, которые уже были в сессии
-      Object.keys(cf).forEach((key) => {
-        if (!fieldKeys.includes(key)) {
-          newCf[key] = cf[key];
-        }
-      });
-
-      session.constant_fields = newCf;
-      setSessionJson(session);
-    }
+    const scopes = getTemplateFieldScopes(data.metadata || {});
+    mergeTemplateFieldsToConstantFields(scopes.constantKeys);
 
     setOutput(`Metadata сгенерированы для ${docxName}`);
   } catch (e) {
@@ -422,6 +774,7 @@ async function saveCurrentTemplateMetadata() {
 
 async function calculateDates() {
   try {
+    flushEditorsToSession();
     const session = getSessionJson();
     if (!session) {
       setOutput("Нет данных сессии для перерасчёта");
@@ -455,6 +808,7 @@ async function calculateDates() {
 
 async function generateDocuments() {
   try {
+    flushEditorsToSession();
     const session = getSessionJson();
     if (!session) {
       setOutput("Нет данных сессии для генерации");
@@ -477,6 +831,7 @@ async function generateDocuments() {
 
 async function previewDocument() {
   try {
+    flushEditorsToSession();
     const session = getSessionJson();
     if (!session) {
       setOutput("Нет данных сессии для предпросмотра");
@@ -554,6 +909,26 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const btnAddAosrRow = document.getElementById("btn-add-aosr-row");
+  if (btnAddAosrRow) {
+    btnAddAosrRow.addEventListener("click", addAosrRow);
+  }
+
+  const btnDeleteAosrSelected = document.getElementById("btn-delete-aosr-selected");
+  if (btnDeleteAosrSelected) {
+    btnDeleteAosrSelected.addEventListener("click", () => {
+      if (!aosrHot) return;
+      const rows = aosrHot.getSourceData();
+      const filtered = rows.filter((r) => !r.selected);
+      syncingFromHot = true;
+      aosrHot.loadData(filtered);
+      syncingFromHot = false;
+      syncSessionFromAosrHot();
+      renderAllViews();
+      setOutput("Отмеченные строки АОСР удалены.");
+    });
+  }
+
   const btnAddConst = document.getElementById("btn-add-const");
   if (btnAddConst) {
     btnAddConst.addEventListener("click", () => {
@@ -593,6 +968,12 @@ window.addEventListener("DOMContentLoaded", () => {
           buildMetadataForTemplate(docx);
         }
       }
+      if (target.classList.contains("btn-add-template")) {
+        const docx = target.dataset.docx;
+        if (docx) {
+          addTemplateToRegistry(docx);
+        }
+      }
     });
   }
 
@@ -627,10 +1008,10 @@ window.addEventListener("DOMContentLoaded", () => {
       const yyyy = now.getFullYear();
       const hh = String(now.getHours()).padStart(2, "0");
       const min = String(now.getMinutes()).padStart(2, "0");
-      const stamp = `${dd}.${mm}.${yyyy} ${hh}.${min}`;
+      const stamp = `${dd}_${mm}_${yyyy}_${hh}_${min}`;
 
       const baseName = "Новая_сессия";
-      const fullName = `${baseName} ${stamp}`;
+      const fullName = `${baseName}_${stamp}`;
 
       currentSession = {
         meta: {
@@ -653,6 +1034,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // Автозагрузка: сначала последняя сохранённая сессия, иначе sample.
+  loadTemplates();
   loadLastOrSampleSession();
 });
-
