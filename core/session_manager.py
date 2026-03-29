@@ -22,6 +22,7 @@ from typing import Any, Dict, List
 
 
 SESSIONS_DIR = Path("sessions")
+SESSION_DATA_DIR = Path("session_data")
 
 
 @dataclass
@@ -43,6 +44,18 @@ class Session:
 def _ensure_sessions_dir() -> Path:
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     return SESSIONS_DIR
+
+
+def _ensure_session_data_dirs(session_name: str) -> Path:
+    """Создаёт папки materials, attachments, exports для сессии.
+    
+    idempotent: безопасно вызывать несколько раз.
+    """
+    base = SESSION_DATA_DIR / session_name
+    (base / "materials").mkdir(parents=True, exist_ok=True)
+    (base / "attachments").mkdir(parents=True, exist_ok=True)
+    (base / "exports").mkdir(parents=True, exist_ok=True)
+    return base
 
 
 def get_session_path(name: str) -> Path:
@@ -81,12 +94,16 @@ def load_session(name_or_path: str) -> Session:
 def save_session(session: Session, name: str | None = None) -> Path:
     """Сохраняет сессию в файл и возвращает путь.
 
-    Если name не указан, используется session.name.
+    При сохранении создаёт структуру папок:
+    session_data/<session_name>/materials
+    session_data/<session_name>/attachments
+    session_data/<session_name>/exports
     """
     if name is None:
         name = session.name
     path = get_session_path(name)
     path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_session_data_dirs(name)
     with path.open("w", encoding="utf-8") as f:
         json.dump(session.raw, f, ensure_ascii=False, indent=2)
     return path
