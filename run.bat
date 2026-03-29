@@ -1,27 +1,26 @@
 @echo off
-chcp 65001 >nul
-REM Запуск локального веб-приложения генератора исполнительной документации
-REM Скрипт создаёт venv (если нет), устанавливает зависимости и запускает app.py.
+chcp 65001 >nul 2>&1
+REM Launch local web app for generating documentation
+REM Creates venv (if missing), installs dependencies, and runs app.py
 
 cd /d "%~dp0"
 
 if not exist ".venv" (
-    echo Создаю виртуальное окружение .venv ...
+    echo Creating virtual environment .venv ...
     python -m venv .venv
 )
 
 call ".venv\Scripts\activate.bat"
 
-echo Устанавливаю зависимости ...
+echo Installing dependencies ...
 python -m pip install --upgrade pip
 pip install --retries 10 --timeout 120 --no-cache-dir -r requirements.txt
 
-echo Запускаю приложение ...
+echo Starting application ...
 start "" "http://127.0.0.1:5000/"
 python app.py
 
 echo.
-echo Приложение должно быть доступно по адресу http://127.0.0.1:5000/
-echo Нажмите любую клавишу для завершения окна.
+echo Application should be available at http://127.0.0.1:5000/
+echo Press any key to close this window.
 pause >nul
-

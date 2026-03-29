@@ -88,7 +88,6 @@ function getSessionJson() {
 }
 
 function flushEditorsToSession() {
-  syncSessionFromAosrHot();
 }
 
 function setSessionJson(obj) {
@@ -312,11 +311,34 @@ function renderMaterials() {
 }
 
 function renderAosr() {
-  initAosrHot();
-  if (!aosrHot) return;
-  syncingFromHot = true;
-  aosrHot.loadData(buildAosrRowsFromSession(getSessionJson()));
-  syncingFromHot = false;
+  const tbody = document.querySelector("#aosr-table tbody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  if (!session) return;
+
+  const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  docs
+    .filter((d) => (d.type || "").trim() === "АОСР")
+    .forEach((d) => {
+      const data = d.data || {};
+      const tr = document.createElement("tr");
+      tr.dataset.docId = d.id || "";
+      tr.innerHTML = `
+        <td>${d.order ?? ""}</td>
+        <td>${d.id ?? ""}</td>
+        <td>${d.title ?? ""}</td>
+        <td><input type="text" class="aosr-cell-input" data-field="номер" value="${data.номер ?? ""}"></td>
+        <td><textarea class="aosr-cell-textarea" data-field="Наименование_работ">${data.Наименование_работ ?? ""}</textarea></td>
+        <td><textarea class="aosr-cell-textarea" data-field="Материалы_и_серты">${data.Материалы_и_серты ?? ""}</textarea></td>
+        <td><textarea class="aosr-cell-textarea" data-field="Схемы_и_тд">${data.Схемы_и_тд ?? ""}</textarea></td>
+        <td><textarea class="aosr-cell-textarea" data-field="Разрешает_пр_во_работ_по">${data.Разрешает_пр_во_работ_по ?? ""}</textarea></td>
+        <td><textarea class="aosr-cell-textarea" data-field="СП">${data.СП ?? ""}</textarea></td>
+        <td><input type="date" class="aosr-cell-input" data-field="start_date" value="${d.start_date ?? ""}"></td>
+        <td><input type="date" class="aosr-cell-input" data-field="end_date" value="${d.end_date ?? ""}"></td>
+        <td><input type="checkbox" class="aosr-cell-checkbox" data-field="manual_override" ${d.manual_override ? "checked" : ""}></td>
+      `;
+      tbody.appendChild(tr);
+    });
 }
 
 function isoToRuDate(value) {
@@ -1137,24 +1159,58 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const aosrTable = document.getElementById("aosr-table");
+  if (aosrTable) {
+    const updateAosrField = (target) => {
+      const tr = target.closest("tr");
+      const docId = tr?.dataset.docId;
+      const field = target.dataset.field;
+      if (!docId || !field) return;
+
+      const session = getSessionJson();
+      if (!session) return;
+
+      const doc = (session.documents || []).find((d) => d.id === docId);
+      if (!doc) return;
+
+      if (field === "start_date" || field === "end_date") {
+        doc[field] = target.value || null;
+      } else if (field === "manual_override") {
+        doc.manual_override = !!target.checked;
+      } else {
+        doc.data = doc.data || {};
+        doc.data[field] = target.value;
+        if (field === "номер") {
+          const n = Number.parseInt(target.value, 10);
+          if (Number.isFinite(n) && n > 0) {
+            doc.order = n;
+            doc.title = `АОСР №${n}`;
+          }
+        }
+      }
+
+      syncAosrOrderByNumber(session);
+      setSessionJson(session);
+    };
+
+    aosrTable.addEventListener("change", (e) => {
+      const target = e.target;
+      if (target.matches(".aosr-cell-input, .aosr-cell-textarea, .aosr-cell-checkbox")) {
+        updateAosrField(target);
+      }
+    });
+
+    aosrTable.addEventListener("blur", (e) => {
+      const target = e.target;
+      if (target.matches(".aosr-cell-input, .aosr-cell-textarea")) {
+        updateAosrField(target);
+      }
+    }, true);
+  }
+
   const btnAddAosrRow = document.getElementById("btn-add-aosr-row");
   if (btnAddAosrRow) {
     btnAddAosrRow.addEventListener("click", addAosrRow);
-  }
-
-  const btnDeleteAosrSelected = document.getElementById("btn-delete-aosr-selected");
-  if (btnDeleteAosrSelected) {
-    btnDeleteAosrSelected.addEventListener("click", () => {
-      if (!aosrHot) return;
-      const rows = aosrHot.getSourceData();
-      const filtered = rows.filter((r) => !r.selected);
-      syncingFromHot = true;
-      aosrHot.loadData(filtered);
-      syncingFromHot = false;
-      syncSessionFromAosrHot();
-      renderAllViews();
-      setOutput("Отмеченные строки АОСР удалены.");
-    });
   }
 
   const btnAddConst = document.getElementById("btn-add-const");
