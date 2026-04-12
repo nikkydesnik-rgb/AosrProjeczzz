@@ -100,6 +100,16 @@ def create_app() -> Flask:
 
         return jsonify({"status": "ok", "path": str(path)})
 
+    @app.get("/api/session/list")
+    def api_list_sessions():
+        """Вернуть список сохранённых сессий."""
+        try:
+            names = session_manager.list_sessions()
+        except Exception as e:  # pragma: no cover
+            errors.handle_error(e, {"endpoint": "api_list_sessions"})
+            return jsonify({"error": "Failed to list sessions"}), 500
+        return jsonify({"items": names})
+
     # --- Даты --------------------------------------------------------------
 
     @app.post("/api/dates/calculate")
@@ -336,4 +346,3 @@ if __name__ == "__main__":
     # Запуск для локальной разработки
     flask_app = create_app()
     flask_app.run(host="127.0.0.1", port=5000, debug=True)
-
