@@ -24,13 +24,8 @@
         <button id="btn-new-session">Новая сессия</button>
       </div>
       <div class="buttons-row">
-        <select id="select-sessions"></select>
+        <select id="select-session-name"></select>
         <button id="btn-load-session">Загрузить</button>
-      </div>
-      <div class="buttons-row">
-        <button id="btn-load-file">Загрузить файл...</button>
-        <button id="btn-load-sample">Загрузить sample_session.json</button>
-        <button id="btn-new-session">Новая сессия</button>
       </div>
 
       <h3>Пересчёт дат</h3>
@@ -72,9 +67,9 @@
         <button class="tab-button" data-tab="aosr">АОСР</button>
         <button class="tab-button" data-tab="other">Остальные шаблоны</button>
         <button class="tab-button" data-tab="attachments">Приложения</button>
+        <button class="tab-button" data-tab="registry">Реестр</button>
         <button class="tab-button" data-tab="templates">Шаблоны</button>
         <button class="tab-button" data-tab="json">JSON</button>
-        <button class="tab-button" data-tab="registry">Реестр</button>
       </div>
 
       <div class="tab-panels">
@@ -101,15 +96,18 @@
 
         <div id="tab-materials" class="tab-panel">
           <h2>Материалы</h2>
-          <p class="hint">Пока только просмотр. Распределение по актам будет добавлено позже.</p>
+          <p class="hint">Справочник материалов. Выберите материалы в строках АОСР.</p>
+          <div class="buttons-row">
+            <button id="btn-add-material" type="button">Добавить материал</button>
+          </div>
           <table class="simple-table" id="materials-table">
             <thead>
               <tr>
-                <th>#</th>
+                <th></th>
                 <th>Наименование</th>
                 <th>Кол-во</th>
                 <th>Ед.</th>
-                <th>Документ</th>
+                <th>Документ о качестве</th>
                 <th>Срок действия</th>
               </tr>
             </thead>
@@ -121,24 +119,23 @@
           <h2>АОСР</h2>
           <p class="hint">Редактируемая таблица актов АОСР: здесь заполняются поля, которые меняются от акта к акту.</p>
           <div class="buttons-row">
-            <button id="btn-add-aosr-row" type="button">Добавить акт (строку)</button>
+            <button id="btn-add-aosr-row" type="button">Добавить акт</button>
+            <button id="btn-delete-aosr-row" type="button" disabled>Удалить выбранную строку</button>
           </div>
           <div class="table-scroll-x">
             <table class="simple-table" id="aosr-table">
               <thead>
                 <tr>
-                  <th>order</th>
-                  <th>id</th>
-                  <th>Название</th>
+                  <th class="col-select"><input type="checkbox" id="aosr-select-all" /></th>
                   <th>№</th>
+                  <th>Название</th>
                   <th>Наименование работ</th>
                   <th>Материалы и серты</th>
-                  <th>Схемы и т.д.</th>
-                  <th>Разрешает пр-во работ</th>
+                  <th>Приложения</th>
+                  <th>Разрешает</th>
                   <th>СП</th>
                   <th>Начало</th>
                   <th>Окончание</th>
-                  <th>manual_override</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -147,30 +144,59 @@
         </div>
 
         <div id="tab-other" class="tab-panel">
-          <h2>Остальные шаблоны</h2>
-          <table class="simple-table" id="other-table">
+          <h2>Иные акты</h2>
+          <p class="hint">Документы, отличные от АОСР. Заполните поля и нажмите "Сгенерировать".</p>
+          <div class="table-scroll-x">
+            <table class="simple-table" id="other-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Тип</th>
+                  <th>Название</th>
+                  <th>Шаблон</th>
+                  <th>Дата</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tab-attachments" class="tab-panel">
+          <h2>Приложения</h2>
+          <p class="hint">PDF файлы приложений к актам.</p>
+          <div class="buttons-row">
+            <button id="btn-add-attachment" type="button">Добавить приложение</button>
+          </div>
+          <table class="simple-table" id="attachments-table">
             <thead>
               <tr>
-                <th>order</th>
-                <th>id</th>
-                <th>Тип</th>
+                <th></th>
                 <th>Название</th>
-                <th>Дата</th>
+                <th>Файл</th>
+                <th>Порядок</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
 
-        <div id="tab-attachments" class="tab-panel">
-          <h2>Приложения</h2>
-          <table class="simple-table" id="attachments-table">
+        <div id="tab-registry" class="tab-panel">
+          <h2 class="registry-title">РЕЕСТР</h2>
+          <p class="registry-object" id="registry-object"></p>
+          <div class="buttons-row">
+            <button id="btn-registry-refresh" type="button">Обновить</button>
+          </div>
+          <table class="simple-table" id="registry-table">
             <thead>
               <tr>
-                <th>id</th>
-                <th>Путь</th>
-                <th>Тип</th>
-                <th>Порядок</th>
+                <th>№ п/п</th>
+                <th>Наименование документа</th>
+                <th>№ и дата</th>
+                <th>Организация</th>
+                <th>Листов</th>
+                <th>Статус</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -206,27 +232,6 @@
         <div id="tab-json" class="tab-panel">
           <h2>Сырой JSON</h2>
           <textarea id="session-json" spellcheck="false"></textarea>
-        </div>
-
-        <div id="tab-registry" class="tab-panel">
-          <h2 class="registry-title">РЕЕСТР</h2>
-          <p id="registry-object-line" class="hint"></p>
-          <table class="simple-table" id="registry-table">
-            <thead>
-              <tr>
-                <th>↑↓</th>
-                <th>Статус</th>
-                <th>№ п/п</th>
-                <th>Наименование документа</th>
-                <th>№ и дата чертежа/акта/док.</th>
-                <th>Организация</th>
-                <th>Кол-во листов</th>
-                <th>Лист по списку</th>
-                <th>Файл</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
         </div>
       </div>
     </section>

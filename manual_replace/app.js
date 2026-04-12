@@ -65,42 +65,6 @@ function syncTextareaFromSession() {
   }
 }
 
-function buildSessionTimestamp(now = new Date()) {
-  const dd = String(now.getDate()).padStart(2, "0");
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const yyyy = now.getFullYear();
-  const hh = String(now.getHours()).padStart(2, "0");
-  const min = String(now.getMinutes()).padStart(2, "0");
-  return `${dd}.${mm}.${yyyy} ${hh}:${min}`;
-}
-
-function stripSessionTimestamp(name) {
-  return String(name || "").replace(/\s\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}$/, "").trim();
-}
-
-async function loadSessionOptions(selectedName = "") {
-  const select = document.getElementById("select-sessions");
-  if (!select) return;
-  try {
-    const res = await fetch("/api/session/list");
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || "Ошибка загрузки списка сессий");
-    const items = Array.isArray(data?.items) ? data.items : [];
-    select.innerHTML = "";
-    items.forEach((name) => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      select.appendChild(opt);
-    });
-    if (selectedName) {
-      select.value = selectedName;
-    }
-  } catch (e) {
-    setOutput("Не удалось загрузить список сессий: " + e.message);
-  }
-}
-
 function syncSessionFromTextarea() {
   const ta = document.getElementById("session-json");
   if (!ta) return;
@@ -240,11 +204,30 @@ async function saveSession() {
       return;
     }
     const nameInput = document.getElementById("input-session-name");
-    const currentName = session?.meta?.name || "";
-    const inputNameValue = nameInput?.value?.trim() || "";
-    const baseNameRaw = stripSessionTimestamp(inputNameValue || currentName || "session");
+
+    const stripTrailingStamps = (value) => {
+      let out = String(value || "").trim();
+      // Удаляем один или несколько хвостов дат:
+      // 1) старый формат: _DD_MM_YYYY_HH_MM
+      // 2) новый формат: " DD.MM.YYYY HH:MM"
+      while (/_\d{2}_\d{2}_\d{4}_\d{2}_\d{2}$/.test(out) || /\s+\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/.test(out)) {
+        out = out
+          .replace(/_\d{2}_\d{2}_\d{4}_\d{2}_\d{2}$/, "")
+          .replace(/\s+\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}$/, "");
+      }
+      return out.trim();
+    };
+
+    const rawName = nameInput?.value?.trim() || session?.meta?.name || "session";
+    const baseNameRaw = stripTrailingStamps(rawName) || "session";
+
     const now = new Date();
-    const stamp = buildSessionTimestamp(now);
+    const dd = String(now.getDate()).padStart(2, "0");
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const min = String(now.getMinutes()).padStart(2, "0");
+    const stamp = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
     const fullName = `${baseNameRaw} ${stamp}`;
 
     session.meta = session.meta || {};
@@ -266,15 +249,11 @@ async function saveSession() {
     });
     const data = await res.json();
     if (res.ok) {
-      const pathParts = String(data?.path || "").split("/").filter(Boolean);
-      const savedName = pathParts[pathParts.length - 1] === "session.json"
-        ? pathParts[pathParts.length - 2]
-        : (pathParts[pathParts.length - 1] || "").replace(/\.json$/i, "") || fullName;
       try {
-        localStorage.setItem("lastSessionName", savedName);
+        localStorage.setItem("lastSessionName", data?.name || fullName);
       } catch (_) {}
-      await loadSessionOptions(savedName);
-      setOutput("Сессия сохранена.");
+      await loadSessionsList();
+      setOutput("сессия сохранена");
       return;
     }
     setOutput(data);
@@ -317,24 +296,64 @@ function renderMaterials() {
   tbody.innerHTML = "";
   if (!session) return;
   const mats = session.materials || [];
-  mats.forEach((m) => {
+  mats.forEach((m, idx) => {
     const tr = document.createElement("tr");
+    tr.dataset.matIdx = String(idx);
     tr.innerHTML = `
-      <td>${m.row_id ?? ""}</td>
-      <td>${m.name ?? ""}</td>
-      <td>${m.qty ?? ""}</td>
-      <td>${m.unit ?? ""}</td>
-      <td>${m.document_name ?? ""}</td>
-      <td>${m.validity ?? ""}</td>
+      <td class="col-select"><input type="checkbox" class="mat-row-select" value="${idx}" /></td>
+      <td><input type="text" class="mat-cell-input" data-field="name" value="${m.name ?? ""}" placeholder="Наименование"></td>
+      <td><input type="number" class="mat-cell-input" data-field="qty" value="${m.qty ?? ""}" step="0.01"></td>
+      <td><input type="text" class="mat-cell-input" data-field="unit" value="${m.unit ?? ""}" placeholder="шт/кг/м"></td>
+      <td><input type="text" class="mat-cell-input" data-field="document_name" value="${m.document_name ?? ""}" placeholder="Сертификат №"></td>
+      <td><input type="text" class="mat-cell-input" data-field="validity" value="${m.validity ?? ""}" placeholder="до dd.mm.yyyy"></td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+function addMaterialRow() {
+  const session = getSessionJson() || {};
+  session.materials = session.materials || [];
+  session.materials.push({
+    name: "",
+    qty: 0,
+    unit: "",
+    document_name: "",
+    validity: "",
+  });
+  setSessionJson(session);
+  setOutput("Добавлен материал");
+}
+
+function deleteSelectedMaterials() {
+  const checked = document.querySelectorAll(".mat-row-select:checked");
+  if (!checked || checked.length === 0) return;
+  const toDelete = Array.from(checked).map(cb => Number(cb.value)).sort((a, b) => b - a);
+  const session = getSessionJson();
+  if (!session) return;
+  toDelete.forEach(idx => { session.materials.splice(idx, 1); });
+  setSessionJson(session);
+  setOutput(`Удалено материалов: ${toDelete.length}`);
+}
+
+function updateMaterialField(target) {
+  const tr = target.closest("tr");
+  const idx = Number(tr?.dataset.matIdx);
+  const field = target.dataset.field;
+  if (!Number.isFinite(idx)) return;
+  const session = getSessionJson();
+  if (!session) return;
+  const mat = session.materials?.[idx];
+  if (!mat) return;
+  mat[field] = target.value;
+  setSessionJson(session);
 }
 
 function renderAosr() {
   const tbody = document.querySelector("#aosr-table tbody");
   if (!tbody) return;
   tbody.innerHTML = "";
+  const session = getSessionJson();
   if (!session) return;
 
   const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -345,10 +364,9 @@ function renderAosr() {
       const tr = document.createElement("tr");
       tr.dataset.docId = d.id || "";
       tr.innerHTML = `
+        <td class="col-select"><input type="checkbox" class="aosr-row-select" value="${d.id}" /></td>
         <td>${d.order ?? ""}</td>
-        <td>${d.id ?? ""}</td>
         <td>${d.title ?? ""}</td>
-        <td><input type="text" class="aosr-cell-input" data-field="номер" value="${data.номер ?? ""}"></td>
         <td><textarea class="aosr-cell-textarea" data-field="Наименование_работ">${data.Наименование_работ ?? ""}</textarea></td>
         <td><textarea class="aosr-cell-textarea" data-field="Материалы_и_серты">${data.Материалы_и_серты ?? ""}</textarea></td>
         <td><textarea class="aosr-cell-textarea" data-field="Схемы_и_тд">${data.Схемы_и_тд ?? ""}</textarea></td>
@@ -356,10 +374,12 @@ function renderAosr() {
         <td><textarea class="aosr-cell-textarea" data-field="СП">${data.СП ?? ""}</textarea></td>
         <td><input type="date" class="aosr-cell-input" data-field="start_date" value="${d.start_date ?? ""}"></td>
         <td><input type="date" class="aosr-cell-input" data-field="end_date" value="${d.end_date ?? ""}"></td>
-        <td><input type="checkbox" class="aosr-cell-checkbox" data-field="manual_override" ${d.manual_override ? "checked" : ""}></td>
       `;
       tbody.appendChild(tr);
     });
+
+  const btnDelete = document.getElementById("btn-delete-aosr-row");
+  updateAosrDeleteButton();
 }
 
 function isoToRuDate(value) {
@@ -475,7 +495,7 @@ function initAosrHot() {
       "Начало",
       "Конец",
       "Материалы и серты",
-      "Приложения",
+      "Схемы и тд",
       "Разрешает пр-во работ по",
       "СП",
     ],
@@ -513,18 +533,46 @@ function renderOtherDocs() {
   docs
     .filter((d) => (d.type || "").trim() !== "АОСР")
     .forEach((d) => {
-      const date =
-        d.date || d.end_date || d.start_date || "";
+      const date = d.date || d.end_date || d.start_date || "";
       const tr = document.createElement("tr");
+      tr.dataset.docId = d.id || "";
       tr.innerHTML = `
-        <td>${d.order ?? ""}</td>
-        <td>${d.id ?? ""}</td>
+        <td class="col-select"><input type="checkbox" class="other-row-select" value="${d.id}" /></td>
         <td>${d.type ?? ""}</td>
         <td>${d.title ?? ""}</td>
-        <td>${date}</td>
+        <td>${d.template ?? ""}</td>
+        <td><input type="date" class="other-date-input" data-doc-id="${d.id}" value="${date}" /></td>
+        <td>
+          <button type="button" class="btn-preview-doc" data-doc-id="${d.id}">Предпросмотр</button>
+          <button type="button" class="btn-delete-other" data-doc-id="${d.id}">Удалить</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
+}
+
+function deleteSelectedOtherDocs() {
+  const checked = document.querySelectorAll(".other-row-select:checked");
+  if (!checked || checked.length === 0) return;
+  const toDelete = Array.from(checked).map(cb => cb.value);
+  const session = getSessionJson();
+  if (!session) return;
+  session.documents = (session.documents || []).filter(d => !toDelete.includes(d.id));
+  setSessionJson(session);
+  setOutput(`Удалено документов: ${toDelete.length}`);
+}
+
+function updateOtherDocDate(docId, date) {
+  const session = getSessionJson();
+  if (!session) return;
+  const doc = (session.documents || []).find(d => d.id === docId);
+  if (!doc) return;
+  if (date) {
+    doc.start_date = date;
+    doc.end_date = date;
+    doc.date = date;
+  }
+  setSessionJson(session);
 }
 
 function renderAttachments() {
@@ -534,73 +582,87 @@ function renderAttachments() {
   tbody.innerHTML = "";
   if (!session) return;
   const atts = session.attachments || [];
-  atts.forEach((a) => {
+  atts.forEach((a, idx) => {
     const tr = document.createElement("tr");
+    tr.dataset.attIdx = String(idx);
     tr.innerHTML = `
-      <td>${a.id ?? ""}</td>
-      <td>${a.path ?? ""}</td>
-      <td>${a.type ?? ""}</td>
-      <td>${a.order ?? ""}</td>
+      <td class="col-select"><input type="checkbox" class="att-row-select" value="${idx}" /></td>
+      <td><input type="text" class="att-cell-input" data-field="title" value="${a.title ?? ""}" placeholder="Название"></td>
+      <td><input type="text" class="att-cell-input" data-field="path" value="${a.path ?? ""}" placeholder="path/to/file.pdf"></td>
+      <td><input type="number" class="att-cell-input" data-field="order" value="${a.order ?? (idx + 1)}"></td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-function ensureRegistryRows(session) {
-  session.registry_rows = Array.isArray(session.registry_rows) ? session.registry_rows : [];
-  const byDocId = new Map(session.registry_rows.map((r) => [r.doc_id, r]));
-  const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-  const rows = docs.map((d, idx) => {
-    const prev = byDocId.get(d.id) || {};
-    return {
-      doc_id: d.id || "",
-      status: prev.status || "yellow",
-      number: idx + 1,
-      title: prev.title || d.title || "",
-      num_date: prev.num_date || d.date || d.end_date || "",
-      org: prev.org || session.constant_fields?.Строитель || "",
-      pages: prev.pages || d.pages || 1,
-      sheet: prev.sheet || idx + 1,
-      file: prev.file || d.template || "",
-    };
+function addAttachmentRow() {
+  const session = getSessionJson() || {};
+  session.attachments = session.attachments || [];
+  const nextOrder = session.attachments.length + 1;
+  session.attachments.push({
+    title: "",
+    path: "",
+    order: nextOrder,
   });
-  session.registry_rows = rows;
+  setSessionJson(session);
+  setOutput("Добавлено приложение");
+}
+
+function deleteSelectedAttachments() {
+  const checked = document.querySelectorAll(".att-row-select:checked");
+  if (!checked || checked.length === 0) return;
+  const toDelete = Array.from(checked).map(cb => Number(cb.value)).sort((a, b) => b - a);
+  const session = getSessionJson();
+  if (!session) return;
+  toDelete.forEach(idx => { session.attachments.splice(idx, 1); });
+  setSessionJson(session);
+  setOutput(`Удалено приложений: ${toDelete.length}`);
+}
+
+function updateAttachmentField(target) {
+  const tr = target.closest("tr");
+  const idx = Number(tr?.dataset.attIdx);
+  const field = target.dataset.field;
+  if (!Number.isFinite(idx)) return;
+  const session = getSessionJson();
+  if (!session) return;
+  const att = session.attachments?.[idx];
+  if (!att) return;
+  att[field] = target.value;
+  setSessionJson(session);
 }
 
 function renderRegistry() {
   const session = getSessionJson();
   const tbody = document.querySelector("#registry-table tbody");
-  const objectLine = document.getElementById("registry-object-line");
+  const objEl = document.getElementById("registry-object");
   if (!tbody) return;
   tbody.innerHTML = "";
   if (!session) return;
-  if (objectLine) {
-    objectLine.textContent = `Объект: ${session?.constant_fields?.Объект || "—"}`;
+
+  if (objEl) {
+    const objValue = session.constant_fields?.Объект || "";
+    objEl.textContent = objValue ? `Объект: ${objValue}` : "";
   }
-  ensureRegistryRows(session);
-  (session.registry_rows || []).forEach((r, idx) => {
+
+  const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  docs.forEach((d) => {
     const tr = document.createElement("tr");
-    tr.className = `registry-status-${r.status || "yellow"}`;
-    tr.dataset.index = String(idx);
+    const status = d.status || "yellow";
+    const statusColor = status === "green" ? "#22c55e" : status === "red" ? "#ef4444" : "#eab308";
+    const statusTitle = status === "green" ? "Готов" : status === "red" ? "Ошибка" : "В работе";
+    const date = d.end_date || d.date || "";
+    const org = session.constant_fields?.Организация_исполнитель || "";
+    const pages = d.pages || 1;
     tr.innerHTML = `
+      <td>${d.order ?? ""}</td>
+      <td>${d.title ?? ""}</td>
+      <td>${date}</td>
+      <td>${org}</td>
+      <td>${pages}</td>
       <td>
-        <button type="button" class="btn-reg-up">↑</button>
-        <button type="button" class="btn-reg-down">↓</button>
+        <span class="status-indicator" style="background:${statusColor}" title="${statusTitle}"></span>
       </td>
-      <td>
-        <select class="reg-input" data-field="status">
-          <option value="green" ${r.status === "green" ? "selected" : ""}>🟢</option>
-          <option value="yellow" ${r.status === "yellow" ? "selected" : ""}>🟡</option>
-          <option value="red" ${r.status === "red" ? "selected" : ""}>🔴</option>
-        </select>
-      </td>
-      <td><input class="reg-input" data-field="number" value="${r.number ?? ""}"></td>
-      <td><input class="reg-input" data-field="title" value="${r.title ?? ""}"></td>
-      <td><input class="reg-input" data-field="num_date" value="${r.num_date ?? ""}"></td>
-      <td><input class="reg-input" data-field="org" value="${r.org ?? ""}"></td>
-      <td><input class="reg-input" data-field="pages" value="${r.pages ?? ""}"></td>
-      <td><input class="reg-input" data-field="sheet" value="${r.sheet ?? ""}"></td>
-      <td><input class="reg-input" data-field="file" value="${r.file ?? ""}"></td>
     `;
     tbody.appendChild(tr);
   });
@@ -648,7 +710,6 @@ async function loadLastOrSampleSession() {
   if (!loaded) {
     await loadSampleSession();
   }
-  await loadSessionOptions(localStorage.getItem("lastSessionName") || "");
 }
 
 // --- Шаблоны ---------------------------------------------------------------
@@ -830,43 +891,29 @@ function syncAosrOrderByNumber(session) {
   });
 }
 
-async function ensureTemplatesCacheLoaded() {
-  if ((templatesCache || []).length > 0) return templatesCache;
-  try {
-    const res = await fetch("/api/templates/list");
-    const data = await res.json();
-    if (res.ok && Array.isArray(data)) {
-      templatesCache = data;
-      return templatesCache;
-    }
-  } catch (e) {
-    // noop: обработаем fallback в detectAosrTemplateName
-  }
-  return templatesCache || [];
-}
-
-async function detectAosrTemplateName(session) {
+function detectAosrTemplateName(session) {
   const docs = session.documents || [];
   const existingAosr = docs.find((d) => (d.type || "").trim() === "АОСР" && d.template);
   if (existingAosr?.template) return existingAosr.template;
 
-  await ensureTemplatesCacheLoaded();
   const fromCache = (templatesCache || []).find((t) => (t.metadata?.type || "").trim() === "АОСР");
   if (fromCache?.docx_name) return fromCache.docx_name;
-
-  const byName = (templatesCache || []).find((t) => /aosr|аоср/i.test(String(t.docx_name || "")));
-  if (byName?.docx_name) return byName.docx_name;
-
-  const withMetadata = (templatesCache || []).find((t) => !!t.has_metadata && !!t.docx_name);
-  if (withMetadata?.docx_name) return withMetadata.docx_name;
-
-  const anyTemplate = (templatesCache || []).find((t) => !!t.docx_name);
-  if (anyTemplate?.docx_name) return anyTemplate.docx_name;
 
   return "";
 }
 
 async function addAosrRow() {
+  if ((templatesCache || []).length === 0) {
+    try {
+      const res = await fetch("/api/templates/list");
+      if (res.ok) {
+        templatesCache = await res.json();
+      }
+    } catch (e) {
+      setOutput("Warning: could not load templates: " + e.message);
+    }
+  }
+
   const session = getSessionJson() || {};
   session.documents = session.documents || [];
 
@@ -877,7 +924,7 @@ async function addAosrRow() {
   const doc = {
     id: buildUniqueDocId(session, "AOSR"),
     type: "АОСР",
-    template: await detectAosrTemplateName(session),
+    template: detectAosrTemplateName(session),
     title: `АОСР №${nextNumber}`,
     order: nextNumber,
     manual_override: false,
@@ -893,11 +940,6 @@ async function addAosrRow() {
       СП: "",
     },
   };
-
-  if (!doc.template) {
-    setOutput("Не найдено ни одного шаблона .docx для АОСР: добавьте шаблон в папку templates.");
-    return;
-  }
 
   session.documents.push(doc);
   syncAosrOrderByNumber(session);
@@ -1250,8 +1292,40 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function updateAosrDeleteButton() {
+    const btnDelete = document.getElementById("btn-delete-aosr-row");
+    if (!btnDelete) return;
+    const checked = document.querySelectorAll(".aosr-row-select:checked");
+    btnDelete.disabled = !checked || checked.length === 0;
+  }
+
+  function deleteSelectedAosrRows() {
+    const checked = document.querySelectorAll(".aosr-row-select:checked");
+    if (!checked || checked.length === 0) return;
+    const toDelete = Array.from(checked).map(cb => cb.value);
+    const session = getSessionJson();
+    if (!session) return;
+    session.documents = (session.documents || []).filter(d => !toDelete.includes(d.id));
+    setSessionJson(session);
+    setOutput(`Удалено строк: ${toDelete.length}`);
+  }
+
   const aosrTable = document.getElementById("aosr-table");
   if (aosrTable) {
+    aosrTable.addEventListener("change", (e) => {
+      if (e.target.classList.contains("aosr-row-select")) {
+        updateAosrDeleteButton();
+      }
+    });
+
+    aosrTable.addEventListener("click", (e) => {
+      if (e.target.id === "aosr-select-all") {
+        const checked = e.target.checked;
+        document.querySelectorAll(".aosr-row-select").forEach(cb => { cb.checked = checked; });
+        updateAosrDeleteButton();
+      }
+    });
+
     const updateAosrField = (target) => {
       const tr = target.closest("tr");
       const docId = tr?.dataset.docId;
@@ -1302,6 +1376,85 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnAddAosrRow = document.getElementById("btn-add-aosr-row");
   if (btnAddAosrRow) {
     btnAddAosrRow.addEventListener("click", addAosrRow);
+  }
+
+  const btnDeleteAosrRow = document.getElementById("btn-delete-aosr-row");
+  if (btnDeleteAosrRow) {
+    btnDeleteAosrRow.addEventListener("click", deleteSelectedAosrRows);
+  }
+
+  const materialsTable = document.getElementById("materials-table");
+  if (materialsTable) {
+    materialsTable.addEventListener("input", (e) => {
+      if (e.target.classList.contains("mat-cell-input")) {
+        updateMaterialField(e.target);
+      }
+    });
+    materialsTable.addEventListener("change", (e) => {
+      if (e.target.classList.contains("mat-cell-input")) {
+        updateMaterialField(e.target);
+      }
+    });
+  }
+  const btnAddMaterial = document.getElementById("btn-add-material");
+  if (btnAddMaterial) {
+    btnAddMaterial.addEventListener("click", addMaterialRow);
+  }
+
+  const attachmentsTable = document.getElementById("attachments-table");
+  if (attachmentsTable) {
+    attachmentsTable.addEventListener("input", (e) => {
+      if (e.target.classList.contains("att-cell-input")) {
+        updateAttachmentField(e.target);
+      }
+    });
+    attachmentsTable.addEventListener("change", (e) => {
+      if (e.target.classList.contains("att-cell-input")) {
+        updateAttachmentField(e.target);
+      }
+    });
+  }
+  const btnAddAttachment = document.getElementById("btn-add-attachment");
+  if (btnAddAttachment) {
+    btnAddAttachment.addEventListener("click", addAttachmentRow);
+  }
+
+  const otherTable = document.getElementById("other-table");
+  if (otherTable) {
+    otherTable.addEventListener("click", (e) => {
+      const target = e.target;
+      if (target.classList.contains("btn-preview-doc")) {
+        const docId = target.dataset.docId;
+        if (docId) {
+          document.getElementById("input-doc-id").value = docId;
+          previewDocument();
+        }
+      }
+      if (target.classList.contains("btn-delete-other")) {
+        const docId = target.dataset.docId;
+        if (docId) {
+          const session = getSessionJson();
+          if (session) {
+            session.documents = (session.documents || []).filter(d => d.id !== docId);
+            setSessionJson(session);
+            setOutput("Документ удалён");
+          }
+        }
+      }
+    });
+    otherTable.addEventListener("change", (e) => {
+      if (e.target.classList.contains("other-date-input")) {
+        updateOtherDocDate(e.target.dataset.docId, e.target.value);
+      }
+    });
+  }
+
+  const btnRegistryRefresh = document.getElementById("btn-registry-refresh");
+  if (btnRegistryRefresh) {
+    btnRegistryRefresh.addEventListener("click", () => {
+      renderRegistry();
+      setOutput("Реестр обновлён");
+    });
   }
 
   const btnAddConst = document.getElementById("btn-add-const");
@@ -1373,31 +1526,18 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const btnLoadSession = document.getElementById("btn-load-session");
-  if (btnLoadSession) {
-    btnLoadSession.addEventListener("click", async () => {
-      const select = document.getElementById("select-sessions");
-      const name = select?.value?.trim();
-      if (!name) {
-        setOutput("Выберите сессию из списка.");
-        return;
-      }
-      try {
-        await loadSessionByName(name);
-        localStorage.setItem("lastSessionName", name);
-        setOutput(`Сессия загружена: ${name}`);
-      } catch (e) {
-        setOutput("Ошибка загрузки сессии: " + e.message);
-      }
-    });
-  }
-
   const btnNewSession = document.getElementById("btn-new-session");
   if (btnNewSession) {
     btnNewSession.addEventListener("click", () => {
       const now = new Date();
+      const dd = String(now.getDate()).padStart(2, "0");
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const yyyy = now.getFullYear();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const min = String(now.getMinutes()).padStart(2, "0");
+      const stamp = `${dd}.${mm}.${yyyy} ${hh}:${min}`;
       const baseName = "Новая сессия";
-      const fullName = `${baseName} ${buildSessionTimestamp(now)}`;
+      const fullName = `${baseName} ${stamp}`;
 
       currentSession = {
         meta: {
@@ -1409,7 +1549,6 @@ window.addEventListener("DOMContentLoaded", () => {
         documents: [],
         materials: [],
         attachments: [],
-        registry_rows: [],
         settings: {},
       };
       try {
@@ -1421,47 +1560,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const registryTable = document.getElementById("registry-table");
-  if (registryTable) {
-    registryTable.addEventListener("input", (e) => {
-      const target = e.target;
-      if (!target.classList.contains("reg-input")) return;
-      const tr = target.closest("tr");
-      const idx = Number.parseInt(tr?.dataset.index || "-1", 10);
-      const field = target.dataset.field;
-      const session = getSessionJson();
-      if (!session || !Array.isArray(session.registry_rows) || !field || idx < 0) return;
-      session.registry_rows[idx][field] = target.value;
-      syncTextareaFromSession();
-      renderRegistry();
-    });
-
-    registryTable.addEventListener("click", (e) => {
-      const target = e.target;
-      const tr = target.closest("tr");
-      const idx = Number.parseInt(tr?.dataset.index || "-1", 10);
-      const session = getSessionJson();
-      if (!session || !Array.isArray(session.registry_rows) || idx < 0) return;
-      const rows = session.registry_rows;
-      if (target.classList.contains("btn-reg-up") && idx > 0) {
-        [rows[idx - 1], rows[idx]] = [rows[idx], rows[idx - 1]];
-      } else if (target.classList.contains("btn-reg-down") && idx < rows.length - 1) {
-        [rows[idx], rows[idx + 1]] = [rows[idx + 1], rows[idx]];
-      } else {
-        return;
-      }
-      rows.forEach((r, i) => {
-        r.number = i + 1;
-        r.sheet = i + 1;
-        const doc = (session.documents || []).find((d) => d.id === r.doc_id);
-        if (doc) doc.order = i + 1;
-      });
-      syncAosrOrderByNumber(session);
-      renderAllViews();
-    });
-  }
-
-  // Автозагрузка: сначала последняя сохранённая сессия, иначе sample.
+  // Автозагрузка: сначала список сессий и последняя сохранённая, иначе sample.
   loadTemplates();
   loadSessionsList().then(() => loadLastOrSampleSession());
 });
