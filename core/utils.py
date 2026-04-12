@@ -14,9 +14,7 @@ from datetime import date, datetime
 from typing import Iterable
 
 
-FILENAME_SAFE_PATTERN = re.compile(r"[^A-Za-z0-9_.-]+")
-SESSION_FORBIDDEN_PATTERN = re.compile(r'[<>:"/\\|?*\x00-\x1F]')
-DISPLAY_STAMP_PATTERN = re.compile(r"^(?P<base>.+?)\s+(?P<dd>\d{2})\.(?P<mm>\d{2})\.(?P<yyyy>\d{4})\s+(?P<hh>\d{2}):(?P<mi>\d{2})$")
+FILENAME_SAFE_PATTERN = re.compile(r"[^\w\s.-]+", flags=re.UNICODE)
 
 
 def normalize_filename(value: str, max_length: int = 100) -> str:
@@ -28,9 +26,9 @@ def normalize_filename(value: str, max_length: int = 100) -> str:
     if not value:
         return "file"
 
-    # Упрощённая транслитерация: сохраняем только латиницу/цифры, остальное заменяем на "_".
-    # При желании здесь можно подключить полноценную транслитерацию.
+    # Сохраняем unicode-буквы/цифры и безопасные разделители, пробелы заменяем на "_".
     cleaned = FILENAME_SAFE_PATTERN.sub("_", value.strip())
+    cleaned = re.sub(r"\s+", "_", cleaned)
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     if not cleaned:
         cleaned = "file"
@@ -120,4 +118,3 @@ def chunked(iterable: Iterable, size: int):
             chunk = []
     if chunk:
         yield chunk
-

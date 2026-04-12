@@ -24,8 +24,13 @@
         <button id="btn-new-session">Новая сессия</button>
       </div>
       <div class="buttons-row">
-        <select id="select-session-name"></select>
+        <select id="select-sessions"></select>
         <button id="btn-load-session">Загрузить</button>
+      </div>
+      <div class="buttons-row">
+        <button id="btn-load-file">Загрузить файл...</button>
+        <button id="btn-load-sample">Загрузить sample_session.json</button>
+        <button id="btn-new-session">Новая сессия</button>
       </div>
 
       <h3>Пересчёт дат</h3>
@@ -67,9 +72,9 @@
         <button class="tab-button" data-tab="aosr">АОСР</button>
         <button class="tab-button" data-tab="other">Остальные шаблоны</button>
         <button class="tab-button" data-tab="attachments">Приложения</button>
-        <button class="tab-button" data-tab="registry">Реестр</button>
         <button class="tab-button" data-tab="templates">Шаблоны</button>
         <button class="tab-button" data-tab="json">JSON</button>
+        <button class="tab-button" data-tab="registry">Реестр</button>
       </div>
 
       <div class="tab-panels">
@@ -172,23 +177,6 @@
           </table>
         </div>
 
-        <div id="tab-registry" class="tab-panel">
-          <h2>Реестр</h2>
-          <p class="hint">Упрощённый реестр по полю order.</p>
-          <table class="simple-table" id="registry-table">
-            <thead>
-              <tr>
-                <th>order</th>
-                <th>id</th>
-                <th>Название</th>
-                <th>Окончание</th>
-                <th>Файл (логически)</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
         <div id="tab-templates" class="tab-panel">
           <h2>Шаблоны (.docx)</h2>
           <p class="hint">Список шаблонов в папке templates. Для файлов без .json можно сгенерировать metadata.</p>
@@ -218,6 +206,27 @@
         <div id="tab-json" class="tab-panel">
           <h2>Сырой JSON</h2>
           <textarea id="session-json" spellcheck="false"></textarea>
+        </div>
+
+        <div id="tab-registry" class="tab-panel">
+          <h2 class="registry-title">РЕЕСТР</h2>
+          <p id="registry-object-line" class="hint"></p>
+          <table class="simple-table" id="registry-table">
+            <thead>
+              <tr>
+                <th>↑↓</th>
+                <th>Статус</th>
+                <th>№ п/п</th>
+                <th>Наименование документа</th>
+                <th>№ и дата чертежа/акта/док.</th>
+                <th>Организация</th>
+                <th>Кол-во листов</th>
+                <th>Лист по списку</th>
+                <th>Файл</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
     </section>

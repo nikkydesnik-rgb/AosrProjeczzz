@@ -116,6 +116,15 @@ section h3 {
   border: 1px solid #d1d5db;
 }
 
+#select-sessions {
+  flex: 1;
+  min-width: 140px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
 .buttons-row,
 .dates-row,
 .preview-row {
@@ -291,6 +300,41 @@ pre#output-log {
 
 .simple-table tbody tr:nth-child(even) {
   background: #f9fafb;
+}
+
+.registry-title {
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+#registry-table input.reg-input,
+#registry-table select.reg-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+#registry-table .btn-reg-up,
+#registry-table .btn-reg-down {
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-right: 2px;
+  background: #6b7280;
+}
+
+tr.registry-status-green {
+  background: #ecfdf5 !important;
+}
+
+tr.registry-status-yellow {
+  background: #fffbeb !important;
+}
+
+tr.registry-status-red {
+  background: #fef2f2 !important;
 }
 
 textarea#session-json {
