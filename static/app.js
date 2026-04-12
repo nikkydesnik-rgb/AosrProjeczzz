@@ -1392,6 +1392,25 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const btnLoadSession = document.getElementById("btn-load-session");
+  if (btnLoadSession) {
+    btnLoadSession.addEventListener("click", async () => {
+      const select = document.getElementById("select-sessions");
+      const name = select?.value?.trim();
+      if (!name) {
+        setOutput("Выберите сессию из списка.");
+        return;
+      }
+      try {
+        await loadSessionByName(name);
+        localStorage.setItem("lastSessionName", name);
+        setOutput(`Сессия загружена: ${name}`);
+      } catch (e) {
+        setOutput("Ошибка загрузки сессии: " + e.message);
+      }
+    });
+  }
+
   const btnNewSession = document.getElementById("btn-new-session");
   if (btnNewSession) {
     btnNewSession.addEventListener("click", () => {
