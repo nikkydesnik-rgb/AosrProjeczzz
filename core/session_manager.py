@@ -17,11 +17,24 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List
 
 
 SESSIONS_DIR = Path("sessions")
+SESSION_DEFAULTS: Dict[str, Any] = {
+    "meta": {
+        "session_id": "",
+        "name": "unnamed_session",
+    },
+    "constant_fields": {},
+    "documents": [],
+    "materials": [],
+    "attachments": [],
+    "registry_rows": [],
+    "settings": {},
+}
 
 
 @dataclass
@@ -53,18 +66,22 @@ def get_session_path(name: str) -> Path:
 
 def new_session(name: str) -> Session:
     """Создаёт новую пустую сессию с минимальными полями meta."""
-    data: Dict[str, Any] = {
-        "meta": {
-            "session_id": "",
-            "name": name,
-        },
-        "constant_fields": {},
-        "documents": [],
-        "materials": [],
-        "attachments": [],
-        "settings": {},
-    }
+    data: Dict[str, Any] = coerce_session_dict({})
+    data["meta"]["name"] = name
     return Session(raw=data)
+
+
+def coerce_session_dict(raw: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Нормализует словарь сессии до минимально ожидаемой структуры."""
+    source = raw if isinstance(raw, dict) else {}
+    data = deepcopy(SESSION_DEFAULTS)
+    data.update({k: v for k, v in source.items() if k in data})
+    if not isinstance(data.get("meta"), dict):
+        data["meta"] = deepcopy(SESSION_DEFAULTS["meta"])
+    meta = data["meta"]
+    meta.setdefault("session_id", "")
+    meta.setdefault("name", "unnamed_session")
+    return data
 
 
 def load_session(name_or_path: str) -> Session:
@@ -75,7 +92,7 @@ def load_session(name_or_path: str) -> Session:
 
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
-    return Session(raw=data)
+    return Session(raw=coerce_session_dict(data))
 
 
 def save_session(session: Session, name: str | None = None) -> Path:
@@ -87,6 +104,7 @@ def save_session(session: Session, name: str | None = None) -> Path:
         name = session.name
     path = get_session_path(name)
     path.parent.mkdir(parents=True, exist_ok=True)
+    session.raw = coerce_session_dict(session.raw)
     with path.open("w", encoding="utf-8") as f:
         json.dump(session.raw, f, ensure_ascii=False, indent=2)
     return path
@@ -99,4 +117,3 @@ def list_sessions() -> List[str]:
     for file in sorted(base.glob("*.json")):
         result.append(file.stem)
     return result
-
