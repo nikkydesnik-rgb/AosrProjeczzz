@@ -29,6 +29,42 @@ function syncTextareaFromSession() {
   }
 }
 
+function buildSessionTimestamp(now = new Date()) {
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  return `${dd}.${mm}.${yyyy} ${hh}:${min}`;
+}
+
+function stripSessionTimestamp(name) {
+  return String(name || "").replace(/\s\d{2}\.\d{2}\.\d{4}\s\d{2}:\d{2}$/, "").trim();
+}
+
+async function loadSessionOptions(selectedName = "") {
+  const select = document.getElementById("select-sessions");
+  if (!select) return;
+  try {
+    const res = await fetch("/api/session/list");
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Ошибка загрузки списка сессий");
+    const items = Array.isArray(data?.items) ? data.items : [];
+    select.innerHTML = "";
+    items.forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    if (selectedName) {
+      select.value = selectedName;
+    }
+  } catch (e) {
+    setOutput("Не удалось загрузить список сессий: " + e.message);
+  }
+}
+
 function syncSessionFromTextarea() {
   const ta = document.getElementById("session-json");
   if (!ta) return;
@@ -81,16 +117,12 @@ async function saveSession() {
       return;
     }
     const nameInput = document.getElementById("input-session-name");
-    const baseNameRaw = nameInput?.value?.trim() || session?.meta?.name || "session";
-
+    const currentName = session?.meta?.name || "";
+    const inputNameValue = nameInput?.value?.trim() || "";
+    const baseNameRaw = stripSessionTimestamp(inputNameValue || currentName || "session");
     const now = new Date();
-    const dd = String(now.getDate()).padStart(2, "0");
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const yyyy = now.getFullYear();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const min = String(now.getMinutes()).padStart(2, "0");
-    const stamp = `${dd}_${mm}_${yyyy}_${hh}_${min}`;
-    const fullName = `${baseNameRaw}_${stamp}`;
+    const stamp = buildSessionTimestamp(now);
+    const fullName = `${baseNameRaw} ${stamp}`;
 
     session.meta = session.meta || {};
     session.meta.name = fullName;
@@ -111,9 +143,16 @@ async function saveSession() {
     });
     const data = await res.json();
     if (res.ok) {
+      const pathParts = String(data?.path || "").split("/").filter(Boolean);
+      const savedName = pathParts[pathParts.length - 1] === "session.json"
+        ? pathParts[pathParts.length - 2]
+        : (pathParts[pathParts.length - 1] || "").replace(/\.json$/i, "") || fullName;
       try {
-        localStorage.setItem("lastSessionName", fullName);
+        localStorage.setItem("lastSessionName", savedName);
       } catch (_) {}
+      await loadSessionOptions(savedName);
+      setOutput("Сессия сохранена.");
+      return;
     }
     setOutput(data);
   } catch (e) {
@@ -289,7 +328,7 @@ function initAosrHot() {
       "Начало",
       "Конец",
       "Материалы и серты",
-      "Схемы и тд",
+      "Приложения",
       "Разрешает пр-во работ по",
       "СП",
     ],
@@ -360,22 +399,61 @@ function renderAttachments() {
   });
 }
 
+function ensureRegistryRows(session) {
+  session.registry_rows = Array.isArray(session.registry_rows) ? session.registry_rows : [];
+  const byDocId = new Map(session.registry_rows.map((r) => [r.doc_id, r]));
+  const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  const rows = docs.map((d, idx) => {
+    const prev = byDocId.get(d.id) || {};
+    return {
+      doc_id: d.id || "",
+      status: prev.status || "yellow",
+      number: idx + 1,
+      title: prev.title || d.title || "",
+      num_date: prev.num_date || d.date || d.end_date || "",
+      org: prev.org || session.constant_fields?.Строитель || "",
+      pages: prev.pages || d.pages || 1,
+      sheet: prev.sheet || idx + 1,
+      file: prev.file || d.template || "",
+    };
+  });
+  session.registry_rows = rows;
+}
+
 function renderRegistry() {
   const session = getSessionJson();
   const tbody = document.querySelector("#registry-table tbody");
+  const objectLine = document.getElementById("registry-object-line");
   if (!tbody) return;
   tbody.innerHTML = "";
   if (!session) return;
-  const docs = (session.documents || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
-  docs.forEach((d) => {
+  if (objectLine) {
+    objectLine.textContent = `Объект: ${session?.constant_fields?.Объект || "—"}`;
+  }
+  ensureRegistryRows(session);
+  (session.registry_rows || []).forEach((r, idx) => {
     const tr = document.createElement("tr");
-    const fileLogical = `${String(d.order ?? 0).padStart(2, "0")}_${d.type || "DOC"}_${(d.title || "").replace(/\s+/g, "_")}`;
+    tr.className = `registry-status-${r.status || "yellow"}`;
+    tr.dataset.index = String(idx);
     tr.innerHTML = `
-      <td>${d.order ?? ""}</td>
-      <td>${d.id ?? ""}</td>
-      <td>${d.title ?? ""}</td>
-      <td>${d.end_date ?? ""}</td>
-      <td>${fileLogical}</td>
+      <td>
+        <button type="button" class="btn-reg-up">↑</button>
+        <button type="button" class="btn-reg-down">↓</button>
+      </td>
+      <td>
+        <select class="reg-input" data-field="status">
+          <option value="green" ${r.status === "green" ? "selected" : ""}>🟢</option>
+          <option value="yellow" ${r.status === "yellow" ? "selected" : ""}>🟡</option>
+          <option value="red" ${r.status === "red" ? "selected" : ""}>🔴</option>
+        </select>
+      </td>
+      <td><input class="reg-input" data-field="number" value="${r.number ?? ""}"></td>
+      <td><input class="reg-input" data-field="title" value="${r.title ?? ""}"></td>
+      <td><input class="reg-input" data-field="num_date" value="${r.num_date ?? ""}"></td>
+      <td><input class="reg-input" data-field="org" value="${r.org ?? ""}"></td>
+      <td><input class="reg-input" data-field="pages" value="${r.pages ?? ""}"></td>
+      <td><input class="reg-input" data-field="sheet" value="${r.sheet ?? ""}"></td>
+      <td><input class="reg-input" data-field="file" value="${r.file ?? ""}"></td>
     `;
     tbody.appendChild(tr);
   });
@@ -419,6 +497,7 @@ async function loadLastOrSampleSession() {
   if (!loaded) {
     await loadSampleSession();
   }
+  await loadSessionOptions(localStorage.getItem("lastSessionName") || "");
 }
 
 // --- Шаблоны ---------------------------------------------------------------
@@ -600,18 +679,43 @@ function syncAosrOrderByNumber(session) {
   });
 }
 
-function detectAosrTemplateName(session) {
+async function ensureTemplatesCacheLoaded() {
+  if ((templatesCache || []).length > 0) return templatesCache;
+  try {
+    const res = await fetch("/api/templates/list");
+    const data = await res.json();
+    if (res.ok && Array.isArray(data)) {
+      templatesCache = data;
+      return templatesCache;
+    }
+  } catch (e) {
+    // noop: обработаем fallback в detectAosrTemplateName
+  }
+  return templatesCache || [];
+}
+
+async function detectAosrTemplateName(session) {
   const docs = session.documents || [];
   const existingAosr = docs.find((d) => (d.type || "").trim() === "АОСР" && d.template);
   if (existingAosr?.template) return existingAosr.template;
 
+  await ensureTemplatesCacheLoaded();
   const fromCache = (templatesCache || []).find((t) => (t.metadata?.type || "").trim() === "АОСР");
   if (fromCache?.docx_name) return fromCache.docx_name;
+
+  const byName = (templatesCache || []).find((t) => /aosr|аоср/i.test(String(t.docx_name || "")));
+  if (byName?.docx_name) return byName.docx_name;
+
+  const withMetadata = (templatesCache || []).find((t) => !!t.has_metadata && !!t.docx_name);
+  if (withMetadata?.docx_name) return withMetadata.docx_name;
+
+  const anyTemplate = (templatesCache || []).find((t) => !!t.docx_name);
+  if (anyTemplate?.docx_name) return anyTemplate.docx_name;
 
   return "";
 }
 
-function addAosrRow() {
+async function addAosrRow() {
   const session = getSessionJson() || {};
   session.documents = session.documents || [];
 
@@ -622,7 +726,7 @@ function addAosrRow() {
   const doc = {
     id: buildUniqueDocId(session, "AOSR"),
     type: "АОСР",
-    template: detectAosrTemplateName(session),
+    template: await detectAosrTemplateName(session),
     title: `АОСР №${nextNumber}`,
     order: nextNumber,
     manual_override: false,
@@ -638,6 +742,11 @@ function addAosrRow() {
       СП: "",
     },
   };
+
+  if (!doc.template) {
+    setOutput("Не найдено ни одного шаблона .docx для АОСР: добавьте шаблон в папку templates.");
+    return;
+  }
 
   session.documents.push(doc);
   syncAosrOrderByNumber(session);
@@ -999,19 +1108,31 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const btnLoadSession = document.getElementById("btn-load-session");
+  if (btnLoadSession) {
+    btnLoadSession.addEventListener("click", async () => {
+      const select = document.getElementById("select-sessions");
+      const name = select?.value?.trim();
+      if (!name) {
+        setOutput("Выберите сессию из списка.");
+        return;
+      }
+      try {
+        await loadSessionByName(name);
+        localStorage.setItem("lastSessionName", name);
+        setOutput(`Сессия загружена: ${name}`);
+      } catch (e) {
+        setOutput("Ошибка загрузки сессии: " + e.message);
+      }
+    });
+  }
+
   const btnNewSession = document.getElementById("btn-new-session");
   if (btnNewSession) {
     btnNewSession.addEventListener("click", () => {
       const now = new Date();
-      const dd = String(now.getDate()).padStart(2, "0");
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const yyyy = now.getFullYear();
-      const hh = String(now.getHours()).padStart(2, "0");
-      const min = String(now.getMinutes()).padStart(2, "0");
-      const stamp = `${dd}_${mm}_${yyyy}_${hh}_${min}`;
-
-      const baseName = "Новая_сессия";
-      const fullName = `${baseName}_${stamp}`;
+      const baseName = "Новая сессия";
+      const fullName = `${baseName} ${buildSessionTimestamp(now)}`;
 
       currentSession = {
         meta: {
@@ -1023,6 +1144,7 @@ window.addEventListener("DOMContentLoaded", () => {
         documents: [],
         materials: [],
         attachments: [],
+        registry_rows: [],
         settings: {},
       };
       try {
@@ -1030,6 +1152,46 @@ window.addEventListener("DOMContentLoaded", () => {
       } catch (_) {}
       renderAllViews();
       setOutput("Создана новая пустая сессия.");
+    });
+  }
+
+  const registryTable = document.getElementById("registry-table");
+  if (registryTable) {
+    registryTable.addEventListener("input", (e) => {
+      const target = e.target;
+      if (!target.classList.contains("reg-input")) return;
+      const tr = target.closest("tr");
+      const idx = Number.parseInt(tr?.dataset.index || "-1", 10);
+      const field = target.dataset.field;
+      const session = getSessionJson();
+      if (!session || !Array.isArray(session.registry_rows) || !field || idx < 0) return;
+      session.registry_rows[idx][field] = target.value;
+      syncTextareaFromSession();
+      renderRegistry();
+    });
+
+    registryTable.addEventListener("click", (e) => {
+      const target = e.target;
+      const tr = target.closest("tr");
+      const idx = Number.parseInt(tr?.dataset.index || "-1", 10);
+      const session = getSessionJson();
+      if (!session || !Array.isArray(session.registry_rows) || idx < 0) return;
+      const rows = session.registry_rows;
+      if (target.classList.contains("btn-reg-up") && idx > 0) {
+        [rows[idx - 1], rows[idx]] = [rows[idx], rows[idx - 1]];
+      } else if (target.classList.contains("btn-reg-down") && idx < rows.length - 1) {
+        [rows[idx], rows[idx + 1]] = [rows[idx + 1], rows[idx]];
+      } else {
+        return;
+      }
+      rows.forEach((r, i) => {
+        r.number = i + 1;
+        r.sheet = i + 1;
+        const doc = (session.documents || []).find((d) => d.id === r.doc_id);
+        if (doc) doc.order = i + 1;
+      });
+      syncAosrOrderByNumber(session);
+      renderAllViews();
     });
   }
 
